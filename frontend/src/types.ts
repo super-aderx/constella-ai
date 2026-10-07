@@ -33,6 +33,8 @@ export interface Pair {
 export interface Network {
   items: Item[]
   pairs: Pair[]
+  /** The baskets a pair must share to be in the network. Lower under a filter that leaves less data. */
+  minCoOrders: number
   /** Community labels, by index. */
   communities: string[]
   /** Every customer (RFM) segment in the data, for the filter. */

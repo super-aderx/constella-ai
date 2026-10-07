@@ -186,7 +186,8 @@ export function Graph({ network, lit, mode, metric, toolbar, onSelect, children 
                   stroke={on ? "var(--star)" : near || hover === key ? "var(--edge-strong)" : below ? "var(--edge-below)" : "var(--edge)"}
                   opacity={focused && !(hoverItem ? near : on) && hover !== key ? 0.3 : 1}
                   className="animate-edge-draw transition-[stroke,opacity] duration-200"
-                  style={{ animationDelay: `${500 + i * 14}ms` }}
+                  // The pairs draw in one after another, all within 2 s however many there are.
+                  style={{ animationDelay: `${500 + i * Math.min(14, 2000 / network.pairs.length)}ms` }}
                 />
                 {/* A wide invisible line: the pair's hover target */}
                 <line {...{ x1, y1, x2, y2 }} stroke="transparent" strokeWidth={14} />

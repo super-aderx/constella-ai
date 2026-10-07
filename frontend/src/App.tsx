@@ -108,7 +108,7 @@ export default function App() {
               {scope && ` (${scope})`}
             </h1>
             <p className="mt-1 text-[12px] text-ink-muted">
-              {drawn.items.length} product types · {drawn.pairs.length} pairs
+              {drawn.items.length} product types · {drawn.pairs.length} pairs bought together {network.minCoOrders}+ times
             </p>
           </div>
           {selected && <ItemCard network={network} name={selected} onSelect={setSelected} onAsk={send} />}

@@ -55,17 +55,33 @@ def test_pairs_come_strongest_first():
     assert [p["lift"] for p in network["pairs"]] == [6.0, 4.0, 2.0]
 
 
-def test_the_cap_keeps_the_leaders_of_both_rankings(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setattr(data, "MAX_PAIRS", 1)
+@pytest.mark.parametrize(
+    ("baskets", "expected"),
+    [
+        (11431, 60),  # all the data: the threshold as written
+        (5549, 29),  # about half the baskets, half the threshold
+        (389, 5),  # 2 by share, held at the floor
+        (0, 5),
+    ],
+)
+def test_the_threshold_keeps_its_share_of_the_baskets(baskets: int, expected: int):
+    assert data.min_co_orders(baskets, all_baskets=11431) == expected
+
+
+def test_the_threshold_with_no_data_is_the_floor():
+    assert data.min_co_orders(0, all_baskets=0) == 5
+
+
+def test_items_are_those_in_a_pair_and_the_revenue_leaders(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(data, "MAX_REVENUE_ITEMS", 1)
     rows = [
-        {"name": "A", "orders": 900, "revenue": 0.0},
-        {"name": "B", "orders": 900, "revenue": 0.0},
-        *items("C", "D", "E", "F", orders=20),
+        {"name": "A", "orders": 900, "revenue": 100.0},
+        {"name": "B", "orders": 800, "revenue": 90.0},
+        {"name": "C", "orders": 700, "revenue": 80.0},  # no pair, not a leader: left out
+        {"name": "D", "orders": 3, "revenue": 5000.0},  # no pair, the revenue leader
     ]
-    # The most frequent, the highest lift, and one that leads neither ranking.
-    pairs = [pair("A", "B", 800), pair("C", "D", 10), pair("E", "F", 5)]
-    network = build_network(rows, pairs, baskets=1000)
-    assert [(p["a"], p["b"]) for p in network["pairs"]] == [("C", "D"), ("A", "B")]
+    kept = data.select_items(rows, [pair("A", "B", 40)])
+    assert [i["name"] for i in kept] == ["A", "B", "D"]
 
 
 def test_a_pair_at_chance_is_not_grouped():

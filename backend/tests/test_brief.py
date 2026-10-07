@@ -23,7 +23,7 @@ PAIRS = [
     {"a": "Bread", "b": "Milk", "co_orders": 800},
     {"a": "Beer", "b": "Crisps", "co_orders": 10},
 ]
-NETWORK = build_network(ITEMS, PAIRS, baskets=1000)
+NETWORK = {**build_network(ITEMS, PAIRS, baskets=1000), "minCoOrders": 5}
 
 
 def test_brief_lists_every_item_and_pair_with_its_figures():
@@ -31,6 +31,10 @@ def test_brief_lists_every_item_and_pair_with_its_figures():
     assert "Whisky | 3 | $50,000" in lines  # the revenue leader, with no pair
     assert "Bread + Milk | 800 | 0.99x" in lines  # the most frequent pair, below chance
     assert "Beer + Crisps | 10 | 25.00x" in lines
+
+
+def test_brief_says_how_many_baskets_a_pair_needs():
+    assert "## Pairs: every pair found in at least 5 baskets" in agent.brief(NETWORK, None, None)
 
 
 def test_brief_groups_only_the_types_in_a_community():
