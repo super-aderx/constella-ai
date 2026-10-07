@@ -1,4 +1,4 @@
-import { use, useState, useTransition } from "react"
+import { use, useMemo, useRef, useState, useTransition } from "react"
 import { ask, getNetwork } from "./api"
 import { Logo } from "./Brand"
 import { Chat } from "./chat/Chat"
@@ -6,7 +6,7 @@ import { Graph, type Lit } from "./graph/Graph"
 import { ItemCard } from "./graph/ItemCard"
 import { PERIODS, Toolbar } from "./graph/Toolbar"
 import { cn, partnersOf } from "./lib"
-import type { Answer, Filters, Mode, Turn } from "./types"
+import type { Answer, Filters, Metric, Mode, Turn } from "./types"
 
 const TITLE = "高雄市 某零售商 產品並買圖"
 
@@ -16,10 +16,21 @@ const TITLE = "高雄市 某零售商 產品並買圖"
  */
 export default function App() {
   const [filters, setFilters] = useState<Filters>({ days: null, segment: null })
+  /** The filters last chosen. Ahead of `filters` while a new network loads. */
+  const chosen = useRef(filters)
   const [mode, setMode] = useState<Mode>("community")
+  const [metric, setMetric] = useState<Metric>("lift")
+  /** Whether product types with no pair are drawn. */
+  const [unpaired, setUnpaired] = useState(false)
   /** A new filter keeps the old graph on screen, dimmed, until its network arrives. */
   const [loading, startTransition] = useTransition()
   const network = use(getNetwork(filters))
+  // What the graph draws. A hidden product type is still in the data, so the agent can name it.
+  const drawn = useMemo(() => {
+    if (unpaired) return network
+    const paired = new Set(network.pairs.flatMap((p) => [p.a, p.b]))
+    return { ...network, items: network.items.filter((i) => paired.has(i.name)) }
+  }, [network, unpaired])
   const [turns, setTurns] = useState<Turn[]>([])
   /** The product type clicked on the graph. It takes over the highlight from `shown`. */
   const [selected, setSelected] = useState<string | null>(null)
@@ -31,19 +42,24 @@ export default function App() {
     setShown(answer)
   }
 
-  // The selected type may not exist under the new filter, so the highlight is cleared with it.
-  const filter = (next: Filters) =>
-    startTransition(() => {
-      setFilters(next)
-      show(null)
-    })
+  // The selected type may not exist under the new filter, and the answers are about the old one:
+  // the highlight and the conversation are cleared with it.
+  const filter = (next: Filters) => {
+    chosen.current = next
+    setTurns([])
+    show(null)
+    startTransition(() => setFilters(next))
+  }
 
   // One question at a time, so only the last turn can be waiting.
   const send = async (question: string) => {
     if (turns.some((t) => !t.answer)) return
     setTurns((t) => [...t, { question }])
     // A failed request is shown as the answer, so the chat never hangs.
-    const answer = await ask(question, filters).catch((error: Error) => ({ text: error.message, items: [], pairs: [] }))
+    const asked = chosen.current
+    const answer = await ask(question, asked).catch((error: Error) => ({ text: error.message, items: [], pairs: [] }))
+    // The filters changed while it was waiting: the answer is about a network no longer shown.
+    if (chosen.current !== asked) return
     setTurns((t) => [...t.slice(0, -1), { question, answer }])
     show(answer)
   }
@@ -59,10 +75,27 @@ export default function App() {
     <main className="grid h-dvh grid-rows-[45dvh_minmax(0,1fr)] gap-3 p-3 lg:grid-cols-[minmax(0,1fr)_27rem] lg:grid-rows-1 lg:gap-5 lg:p-5">
       <div className={cn("grid min-h-0 transition-opacity", loading && "opacity-50")}>
         <Graph
-          network={network}
+          network={drawn}
           lit={lit}
           mode={mode}
-          toolbar={<Toolbar filters={filters} segments={network.segments} mode={mode} onFilters={filter} onMode={setMode} />}
+          metric={metric}
+          toolbar={
+            <Toolbar
+              filters={filters}
+              segments={network.segments}
+              mode={mode}
+              metric={metric}
+              unpaired={unpaired}
+              onFilters={filter}
+              onMode={setMode}
+              onMetric={setMetric}
+              onUnpaired={(next) => {
+                // The selected type may be one of those now hidden.
+                if (!next) setSelected(null)
+                setUnpaired(next)
+              }}
+            />
+          }
           onSelect={(item) => (item ? setSelected(item === selected ? null : item) : show(null))}
         >
           <div className="pointer-events-none absolute top-5 left-5 max-w-[38%]">
@@ -72,7 +105,7 @@ export default function App() {
               {scope && ` (${scope})`}
             </h1>
             <p className="mt-1 text-[12px] text-ink-muted">
-              {network.items.length} product types · {network.pairs.length} pairs
+              {drawn.items.length} product types · {drawn.pairs.length} pairs
             </p>
           </div>
           {selected && <ItemCard network={network} name={selected} onSelect={setSelected} onAsk={send} />}

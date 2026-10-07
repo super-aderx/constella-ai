@@ -10,8 +10,8 @@ export interface Product {
 /** A product type (the item_tag column). Its name is its id. */
 export interface Item {
   name: string
-  /** Index into `Network.communities`. */
-  community: number
+  /** Index into `Network.communities`. `null`: it has no pair above chance, so no community. */
+  community: number | null
   /** Baskets that include it. */
   orders: number
   revenue: number
@@ -48,6 +48,9 @@ export interface Filters {
 
 /** How the graph is drawn: plain, with its bridges picked out, or coloured by community. */
 export type Mode = "default" | "bridge" | "community"
+
+/** What a line's width shows: the pair's lift, or the baskets that hold both. */
+export type Metric = "lift" | "coOrders"
 
 /** A pair by its two item names. */
 export type PairRef = Pick<Pair, "a" | "b">

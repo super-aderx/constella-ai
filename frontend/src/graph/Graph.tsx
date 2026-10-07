@@ -1,9 +1,10 @@
 import { useLayoutEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode } from "react"
 import { fmt, pairKey, partnersOf } from "../lib"
-import type { Item, Mode, Network, PairRef } from "../types"
+import type { Item, Metric, Mode, Network, Pair, PairRef } from "../types"
 import { forceLayout, type Positions } from "./layout"
 
-export const communityColor = (community: number) => `var(--comm-${(community % 8) + 1})`
+/** A product type in no community is drawn neutral. */
+export const communityColor = (community: number | null) => (community == null ? "var(--ink-faint)" : `var(--comm-${(community % 8) + 1})`)
 
 /** What the graph highlights: these items turn peach, these pairs turn peach, everything else dims. */
 export interface Lit {
@@ -15,7 +16,8 @@ interface GraphProps {
   network: Network
   lit: Lit
   mode: Mode
-  /** Shown above the zoom buttons. */
+  metric: Metric
+  /** Shown beside the zoom buttons. */
   toolbar?: ReactNode
   /** A product type was clicked, or `null` for the empty canvas. */
   onSelect: (item: string | null) => void
@@ -30,11 +32,12 @@ const control = "h-8 min-w-8 cursor-pointer px-2 text-ink-muted transition-color
 
 /**
  * The product type network on a white panel, drawn to the size of its container.
- * Star size = orders, line width = lift. Scroll or use the buttons to zoom, drag the canvas to pan and
+ * Star size = orders, line width = lift or the baskets with both (`metric`). In the lift view, a pair
+ * bought together less often than chance predicts is dashed and blue. Scroll or use the buttons to zoom, drag the canvas to pan and
  * a product type to move it. Zooming spreads the product types apart; stars and names keep a readable size.
  * Hovering a product type lights its pairs; hovering a pair shows its figures; a click selects a product type.
  */
-export function Graph({ network, lit, mode, toolbar, onSelect, children }: GraphProps) {
+export function Graph({ network, lit, mode, metric, toolbar, onSelect, children }: GraphProps) {
   const ref = useRef<HTMLDivElement>(null)
   const [{ width, height }, setSize] = useState({ width: 800, height: 600 })
   const [view, setView] = useState(HOME)
@@ -108,9 +111,11 @@ export function Graph({ network, lit, mode, toolbar, onSelect, children }: Graph
 
   const maxOrders = Math.max(...network.items.map((i) => i.orders))
   const radius = (item: Item) => (5 + 11 * Math.sqrt(item.orders / maxOrders)) * Math.sqrt(view.k)
-  const lifts = network.pairs.map((p) => p.lift)
-  const minLift = Math.min(...lifts)
-  const liftSpan = Math.max(...lifts) - minLift || 1
+  // Baskets are skewed toward the best sellers, so their widths grow with the square root.
+  const weight = (p: Pair) => (metric === "lift" ? p.lift : Math.sqrt(p.coOrders))
+  const weights = network.pairs.map(weight)
+  const minWeight = Math.min(...weights)
+  const weightSpan = Math.max(...weights) - minWeight || 1
 
   const stars = new Set(lit.items)
   const litPairs = new Set(lit.pairs.map((p) => pairKey(p.a, p.b)))
@@ -170,15 +175,15 @@ export function Graph({ network, lit, mode, toolbar, onSelect, children }: Graph
             const [x2, y2] = at(p.b)
             const on = litPairs.has(key)
             const near = p.a === hoverItem || p.b === hoverItem
+            const below = metric === "lift" && p.lift < 1
             return (
               <g key={key} onMouseEnter={() => setHover(key)} onMouseLeave={() => setHover(null)}>
                 <line
                   {...{ x1, y1, x2, y2 }}
-                  pathLength={1}
-                  strokeDasharray={1}
-                  strokeLinecap="round"
-                  strokeWidth={1 + 3 * ((p.lift - minLift) / liftSpan) + (on ? 1 : 0)}
-                  stroke={on ? "var(--star)" : near || hover === key ? "var(--edge-strong)" : "var(--edge)"}
+                  // A solid line draws itself in; a dashed one keeps its dashes, so it is there from the start.
+                  {...(below ? { strokeDasharray: "5 5" } : { pathLength: 1, strokeDasharray: 1, strokeLinecap: "round" })}
+                  strokeWidth={1 + 3 * ((weight(p) - minWeight) / weightSpan) + (on ? 1 : 0)}
+                  stroke={on ? "var(--star)" : near || hover === key ? "var(--edge-strong)" : below ? "var(--edge-below)" : "var(--edge)"}
                   opacity={focused && !(hoverItem ? near : on) && hover !== key ? 0.3 : 1}
                   className="animate-edge-draw transition-[stroke,opacity] duration-200"
                   style={{ animationDelay: `${500 + i * 14}ms` }}
@@ -209,7 +214,12 @@ export function Graph({ network, lit, mode, toolbar, onSelect, children }: Graph
               className="cursor-pointer transition-opacity duration-200"
               onMouseEnter={() => setHover(item.name)}
               onMouseLeave={() => setHover(null)}
-              onKeyDown={(e) => e.key === "Enter" && onSelect(item.name)}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter" && e.key !== " ") return
+                // Space would scroll the page.
+                e.preventDefault()
+                onSelect(item.name)
+              }}
             >
               <g className="origin-center animate-star-in [transform-box:fill-box]" style={{ animationDelay: `${i * 18}ms` }}>
                 {star && <circle r={r + 7} fill="var(--star)" opacity={0.22} />}
@@ -240,8 +250,7 @@ export function Graph({ network, lit, mode, toolbar, onSelect, children }: Graph
         </p>
       )}
 
-      <div className="absolute top-4 right-4 flex max-w-[60%] flex-col items-end gap-2">
-        {toolbar}
+      <div className="absolute top-4 right-4 flex items-start gap-2">
       <div className="flex items-center rounded-lg border border-line bg-surface-raised text-[15px]">
         <button type="button" aria-label="Zoom out" disabled={view.k <= ZOOM.min} onClick={() => zoom(1 / ZOOM.step)} className={control}>
           −
@@ -261,6 +270,7 @@ export function Graph({ network, lit, mode, toolbar, onSelect, children }: Graph
           Reset
         </button>
       </div>
+        {toolbar}
       </div>
 
       <ul className="pointer-events-none absolute bottom-4 left-4 flex max-w-[calc(100%-19rem)] flex-wrap gap-x-4 gap-y-1 text-[12px] text-ink-muted max-sm:hidden">
@@ -277,7 +287,13 @@ export function Graph({ network, lit, mode, toolbar, onSelect, children }: Graph
             Bridge: connects the most other product types
           </li>
         )}
-        <li className="text-ink-faint">Star size: orders · Line width: lift</li>
+        {metric === "lift" && network.pairs.some((p) => p.lift < 1) && (
+          <li className="inline-flex items-center gap-1.5">
+            <span className="w-4 border-t-2 border-dashed border-(--edge-below)" />
+            Bought together often, but less than chance predicts
+          </li>
+        )}
+        <li className="text-ink-faint">Star size: orders · Line width: {metric === "lift" ? "lift" : "baskets with both"}</li>
       </ul>
       {children}
     </div>

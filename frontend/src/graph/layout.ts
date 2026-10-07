@@ -7,7 +7,8 @@ const GOLDEN = Math.PI * (3 - Math.sqrt(5))
 
 /**
  * Force-directed layout (Fruchterman–Reingold with a pull toward each community's centre), started
- * from one cluster per community so groups stay together. Deterministic: no Math.random.
+ * from one cluster per community so groups stay together. Product types in no community start
+ * around the centre and are held by nothing but their pairs. Deterministic: no Math.random.
  * `aspect` is the width / height it is solved for.
  */
 export function forceLayout(items: Item[], pairs: Pair[], aspect = 1.5, iterations = 400): Positions {
@@ -16,7 +17,8 @@ export function forceLayout(items: Item[], pairs: Pair[], aspect = 1.5, iteratio
   const index = new Map(items.map((item, i) => [item.name, i]))
   const maxLift = Math.max(...pairs.map((p) => p.lift))
   const clusters: number[][] = []
-  items.forEach((item, i) => (clusters[item.community] ??= []).push(i))
+  const loose: number[] = []
+  items.forEach((item, i) => (item.community == null ? loose : (clusters[item.community] ??= [])).push(i))
 
   // Start: communities on an ellipse, each one a small spiral.
   const x = new Float64Array(n)
@@ -28,6 +30,11 @@ export function forceLayout(items: Item[], pairs: Pair[], aspect = 1.5, iteratio
       x[i] = aspect / 2 + Math.cos(angle) * aspect * 0.3 + Math.cos(j * GOLDEN + c) * r
       y[i] = 0.5 + Math.sin(angle) * 0.3 + Math.sin(j * GOLDEN + c) * r
     })
+  })
+  loose.forEach((i, j) => {
+    const r = k * 0.6 * Math.sqrt(j + 1)
+    x[i] = aspect / 2 + Math.cos(j * GOLDEN) * r
+    y[i] = 0.5 + Math.sin(j * GOLDEN) * r
   })
 
   for (let it = 0; it < iterations; it++) {

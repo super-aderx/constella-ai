@@ -1,8 +1,8 @@
 """Reads the invoice table and builds the network of product types: items, pairs, communities.
 
 An item is a product type (the item_tag column), not a single product. The queries are in app/sql.
-They assume a table `invoice` with one row per invoice line and the columns invoice_id, item_tag,
-item_name, total_price, segment (the customer's RFM segment) and invoice_date.
+They assume a table `invoice` with one row per invoice line and the columns inv_num, item_tag,
+item_name, amount, segment (the customer's RFM segment) and datetime.
 """
 
 import os
@@ -15,9 +15,10 @@ from psycopg.rows import dict_row
 
 SQL = Path(__file__).parent / "sql"
 
-MAX_ITEMS = 60  # best-selling types kept, so the graph and the brief stay readable
+MAX_ITEMS = 30  # best-selling types kept, so the graph and the brief stay readable
+MAX_REVENUE_ITEMS = 10  # revenue leaders kept as well: few orders can still mean high revenue
 MIN_CO_ORDERS = 5  # pairs seen in fewer baskets are noise
-MAX_PAIRS = 150
+MAX_PAIRS = 150  # kept from each ranking: by lift, and by baskets with both
 MAX_PRODUCTS = 5  # products listed under each product type
 MAX_BRIDGES = 5
 
@@ -40,7 +41,8 @@ def load_network(days: int | None = None, segment: str | None = None) -> dict:
 
         segments = [row["segment"] for row in query("segments")]
         baskets = query("baskets", scope)[0]["baskets"]
-        items = query("items", {**scope, "max_items": MAX_ITEMS})
+        limits = {"max_items": MAX_ITEMS, "max_revenue_items": MAX_REVENUE_ITEMS}
+        items = query("items", {**scope, **limits})
         names = [i["name"] for i in items]
         pairs = query("pairs", {**scope, "names": names, "min_co_orders": MIN_CO_ORDERS})
         products = query("products", {**scope, "names": names, "max_products": MAX_PRODUCTS})
@@ -66,11 +68,23 @@ def build_network(items: list[dict], pairs: list[dict], baskets: int) -> dict:
         }
         for p in pairs
     ]
-    # Keep the pairs bought together more often than chance predicts, strongest first.
-    pairs = sorted((p for p in pairs if p["lift"] > 1), key=lambda p: -p["lift"])[:MAX_PAIRS]
+    # Two rankings, so neither question about pairs is answered from a cut list: the pairs bought
+    # together more often than chance predicts, and the pairs bought together most often. A pair
+    # of best sellers can lead the second with a lift below 1.
+    by_lift = sorted(
+        (p for p in pairs if p["lift"] > 1), key=lambda p: (-p["lift"], p["a"], p["b"])
+    )
+    by_co_orders = sorted(pairs, key=lambda p: (-p["coOrders"], p["a"], p["b"]))
+    kept = {(p["a"], p["b"]) for p in by_lift[:MAX_PAIRS] + by_co_orders[:MAX_PAIRS]}
+    # Strongest first.
+    pairs = sorted(
+        (p for p in pairs if (p["a"], p["b"]) in kept), key=lambda p: (-p["lift"], p["a"], p["b"])
+    )
 
+    # Communities and bridges come from the pairs above chance only: sharing baskets less often
+    # than chance predicts is no reason to group two types.
     graph = nx.Graph()
-    graph.add_weighted_edges_from((p["a"], p["b"], p["lift"]) for p in pairs)
+    graph.add_weighted_edges_from((p["a"], p["b"], p["lift"]) for p in pairs if p["lift"] > 1)
     # Louvain with a fixed seed, largest community first.
     groups = sorted(
         nx.community.louvain_communities(graph, seed=42), key=lambda g: (-len(g), min(g))
@@ -83,13 +97,14 @@ def build_network(items: list[dict], pairs: list[dict], baskets: int) -> dict:
     }
 
     return {
-        # Product types with no pair left are not part of the network.
+        # A product type with no pair above chance is in no community.
         "items": [
-            {**i, "community": community[i["name"]], "bridge": i["name"] in bridges}
+            {**i, "community": community.get(i["name"]), "bridge": i["name"] in bridges}
             for i in items
-            if i["name"] in community
         ],
         "pairs": pairs,
-        # A community is named after its two best sellers.
-        "communities": [" & ".join(sorted(g, key=lambda name: -orders[name])[:2]) for g in groups],
+        # A community is named after its two best sellers. Ties go by name, so the label is stable.
+        "communities": [
+            " & ".join(sorted(g, key=lambda name: (-orders[name], name))[:2]) for g in groups
+        ],
     }

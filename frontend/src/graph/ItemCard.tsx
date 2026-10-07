@@ -19,7 +19,7 @@ export function ItemCard({ network, name, onSelect, onAsk }: ItemCardProps) {
       <header>
         <p className="flex items-center gap-1.5 text-[12px] text-ink-muted">
           <span className="size-2.5 rounded-full" style={{ background: communityColor(item.community) }} />
-          {network.communities[item.community]}
+          {item.community == null ? "No group" : network.communities[item.community]}
           <button type="button" aria-label="Close" onClick={() => onSelect(null)} className="ml-auto cursor-pointer px-1 text-[16px] leading-none">
             ×
           </button>
