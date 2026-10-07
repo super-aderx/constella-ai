@@ -1,4 +1,4 @@
-import { use, useMemo, useRef, useState, useTransition } from "react"
+import { use, useDeferredValue, useMemo, useRef, useState } from "react"
 import { ask, getNetwork } from "./api"
 import { Logo } from "./Brand"
 import { Chat } from "./chat/Chat"
@@ -15,27 +15,30 @@ const TITLE = "高雄市 某零售商 產品並買圖"
  * an answer lights up its items and pairs on the graph, and a product type on the graph can be asked about.
  */
 export default function App() {
+  /** The filters chosen: what the toolbar shows and the agent is asked about. */
   const [filters, setFilters] = useState<Filters>({ days: null, segment: null })
-  /** The filters last chosen. Ahead of `filters` while a new network loads. */
+  /** The same, readable after an await. */
   const chosen = useRef(filters)
+  /** The filters of the network on screen. A new filter keeps the old graph, dimmed, until its network arrives. */
+  const loaded = useDeferredValue(filters)
+  const loading = loaded !== filters
   const [mode, setMode] = useState<Mode>("community")
   const [metric, setMetric] = useState<Metric>("lift")
   /** Whether product types with no pair are drawn. */
   const [unpaired, setUnpaired] = useState(false)
-  /** A new filter keeps the old graph on screen, dimmed, until its network arrives. */
-  const [loading, startTransition] = useTransition()
-  const network = use(getNetwork(filters))
-  // What the graph draws. A hidden product type is still in the data, so the agent can name it.
-  const drawn = useMemo(() => {
-    if (unpaired) return network
-    const paired = new Set(network.pairs.flatMap((p) => [p.a, p.b]))
-    return { ...network, items: network.items.filter((i) => paired.has(i.name)) }
-  }, [network, unpaired])
+  const network = use(getNetwork(loaded))
   const [turns, setTurns] = useState<Turn[]>([])
   /** The product type clicked on the graph. It takes over the highlight from `shown`. */
   const [selected, setSelected] = useState<string | null>(null)
   /** The answer highlighted on the graph. */
   const [shown, setShown] = useState<Answer | null>(null)
+  // What the graph draws. A product type with no pair is hidden unless asked for, or unless the answer
+  // on show names it: the agent knows every type, and what it highlights has to be there.
+  const drawn = useMemo(() => {
+    if (unpaired) return network
+    const kept = new Set([...network.pairs.flatMap((p) => [p.a, p.b]), ...(shown?.items ?? [])])
+    return { ...network, items: network.items.filter((i) => kept.has(i.name)) }
+  }, [network, unpaired, shown])
 
   const show = (answer: Answer | null) => {
     setSelected(null)
@@ -48,7 +51,7 @@ export default function App() {
     chosen.current = next
     setTurns([])
     show(null)
-    startTransition(() => setFilters(next))
+    setFilters(next)
   }
 
   // One question at a time, so only the last turn can be waiting.
@@ -68,8 +71,8 @@ export default function App() {
     ? { items: [selected], pairs: partnersOf(network.pairs, selected).map((p) => ({ a: selected, b: p.name })) }
     : { items: shown?.items ?? [], pairs: shown?.pairs ?? [] }
 
-  // The active filters, named after the title.
-  const scope = [filters.days && PERIODS.find((p) => p.days === filters.days)?.label, filters.segment].filter(Boolean).join(", ")
+  // The filters of the network on screen, named after the title.
+  const scope = [loaded.days && PERIODS.find((p) => p.days === loaded.days)?.label, loaded.segment].filter(Boolean).join(", ")
 
   return (
     <main className="grid h-dvh grid-rows-[45dvh_minmax(0,1fr)] gap-3 p-3 lg:grid-cols-[minmax(0,1fr)_27rem] lg:grid-rows-1 lg:gap-5 lg:p-5">
