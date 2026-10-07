@@ -1,0 +1,27 @@
+[project]
+name = "constella-ai-backend"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "deepeval>=4.2.8",
+    "fastapi[standard]>=0.142.2",
+    "networkx>=3.7",
+    "openai-agents>=0.23.1",
+    "psycopg[binary]>=3.3.6",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16,<0.17",
+    "sqlfluff>=4.3,<4.4",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
