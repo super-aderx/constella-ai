@@ -1,0 +1,25 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows / Linux
+Thumbs.db
+Desktop.ini
+*~
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*.code-workspace
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
