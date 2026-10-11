@@ -44,14 +44,15 @@ def brief(network: dict, days: int | None, segment: str | None) -> str:
     members = [[i["name"] for i in items if i["community"] == c] for c in range(len(communities))]
     return "\n".join(
         [
-            f"# Data brief: the store's {len(items)} leading product types, by orders or revenue",
+            f"# Data brief: the store's {len(items)} product types that pair with another, "
+            "and its revenue leaders",
             f"Period: {f'the last {days} days of the data' if days else 'all of the data'}",
             f"Customers: {f'the {segment} segment only' if segment else 'all segments'}",
             "",
             "## Product types (name | orders | revenue)",
             *(f"{i['name']} | {i['orders']:,} | ${i['revenue']:,.0f}" for i in items),
             "",
-            "## Pairs: the strongest by lift and the most often bought together",
+            f"## Pairs: every pair found in at least {network['minCoOrders']} baskets",
             "(type + type | baskets with both | lift)",
             *(f"{p['a']} + {p['b']} | {p['coOrders']:,} | {p['lift']:.2f}x" for p in pairs),
             "",

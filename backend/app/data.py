@@ -15,10 +15,9 @@ from psycopg.rows import dict_row
 
 SQL = Path(__file__).parent / "sql"
 
-MAX_ITEMS = 30  # best-selling types kept, so the graph and the brief stay readable
-MAX_REVENUE_ITEMS = 10  # revenue leaders kept as well: few orders can still mean high revenue
-MIN_CO_ORDERS = 5  # pairs seen in fewer baskets are noise
-MAX_PAIRS = 150  # kept from each ranking: by lift, and by baskets with both
+MIN_CO_ORDERS = 60  # out of all the data: a pair seen in fewer baskets is an outlier
+MIN_CO_ORDERS_FLOOR = 5  # and never fewer than this, however little data a filter leaves
+MAX_REVENUE_ITEMS = 10  # revenue leaders kept even with no pair: few orders, high revenue
 MAX_PRODUCTS = 5  # products listed under each product type
 MAX_BRIDGES = 5
 
@@ -40,11 +39,14 @@ def load_network(days: int | None = None, segment: str | None = None) -> dict:
             return conn.execute((SQL / f"{name}.sql").read_text(), params).fetchall()
 
         segments = [row["segment"] for row in query("segments")]
+        all_baskets = query("baskets", {"days": None, "segment": None})[0]["baskets"]
         baskets = query("baskets", scope)[0]["baskets"]
-        limits = {"max_items": MAX_ITEMS, "max_revenue_items": MAX_REVENUE_ITEMS}
-        items = query("items", {**scope, **limits})
+        threshold = min_co_orders(baskets, all_baskets)
+        items = query("items", scope)
         names = [i["name"] for i in items]
-        pairs = query("pairs", {**scope, "names": names, "min_co_orders": MIN_CO_ORDERS})
+        pairs = query("pairs", {**scope, "names": names, "min_co_orders": threshold})
+        items = select_items(items, pairs)
+        names = [i["name"] for i in items]
         products = query("products", {**scope, "names": names, "max_products": MAX_PRODUCTS})
     # Each product type carries its best-selling products, for the graph's detail card.
     for item in items:
@@ -53,7 +55,27 @@ def load_network(days: int | None = None, segment: str | None = None) -> dict:
             for p in products
             if p["tag"] == item["name"]
         ]
-    return {**build_network(items, pairs, baskets), "segments": segments}
+    network = build_network(items, pairs, baskets)
+    return {**network, "minCoOrders": threshold, "segments": segments}
+
+
+def min_co_orders(baskets: int, all_baskets: int) -> int:
+    """The baskets a pair must share to count, for a filter that leaves `baskets` baskets.
+
+    MIN_CO_ORDERS is for all the data. A filter keeps the same share of its own baskets, so a
+    small period or segment is not left with no pairs at all.
+    """
+    if not all_baskets:
+        return MIN_CO_ORDERS_FLOOR
+    return max(MIN_CO_ORDERS_FLOOR, round(MIN_CO_ORDERS * baskets / all_baskets))
+
+
+def select_items(items: list[dict], pairs: list[dict]) -> list[dict]:
+    """The product types of the network: those in a pair, and the revenue leaders."""
+    kept = {name for p in pairs for name in (p["a"], p["b"])}
+    leaders = sorted(items, key=lambda i: (-i["revenue"], i["name"]))[:MAX_REVENUE_ITEMS]
+    kept |= {i["name"] for i in leaders}
+    return [i for i in items if i["name"] in kept]
 
 
 def build_network(items: list[dict], pairs: list[dict], baskets: int) -> dict:
@@ -68,18 +90,9 @@ def build_network(items: list[dict], pairs: list[dict], baskets: int) -> dict:
         }
         for p in pairs
     ]
-    # Two rankings, so neither question about pairs is answered from a cut list: the pairs bought
-    # together more often than chance predicts, and the pairs bought together most often. A pair
-    # of best sellers can lead the second with a lift below 1.
-    by_lift = sorted(
-        (p for p in pairs if p["lift"] > 1), key=lambda p: (-p["lift"], p["a"], p["b"])
-    )
-    by_co_orders = sorted(pairs, key=lambda p: (-p["coOrders"], p["a"], p["b"]))
-    kept = {(p["a"], p["b"]) for p in by_lift[:MAX_PAIRS] + by_co_orders[:MAX_PAIRS]}
-    # Strongest first.
-    pairs = sorted(
-        (p for p in pairs if (p["a"], p["b"]) in kept), key=lambda p: (-p["lift"], p["a"], p["b"])
-    )
+    # Every pair stays, whatever its lift, strongest first: a pair of best sellers can be the one
+    # bought together most often with a lift below 1.
+    pairs = sorted(pairs, key=lambda p: (-p["lift"], p["a"], p["b"]))
 
     # Communities and bridges come from the pairs above chance only: sharing baskets less often
     # than chance predicts is no reason to group two types.
