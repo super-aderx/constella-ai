@@ -1,4 +1,4 @@
-# Lint config for the API's queries (app/sql). Like constella-data-platform's (trailing commas,
+# Lint config for the API's queries (app/infra/sql). Like constella-data-platform's (trailing commas,
 # explicit aliases, 2-space indents, 100 columns), except that keywords, functions, types and
 # literals are upper case here. Names stay lower case.
 [sqlfluff]

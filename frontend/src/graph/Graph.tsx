@@ -15,6 +15,11 @@ export interface Lit {
 interface GraphProps {
   network: Network
   lit: Lit
+  /**
+   * The network to lay out instead of `network`: the two sides of a comparison share one, so a
+   * product type sits in the same place on both graphs.
+   */
+  layout?: Network
   mode: Mode
   metric: Metric
   /** Shown beside the zoom buttons. */
@@ -37,7 +42,7 @@ const control = "h-8 min-w-8 cursor-pointer px-2 text-ink-muted transition-color
  * a product type to move it. Zooming spreads the product types apart; stars and names keep a readable size.
  * Hovering a product type lights its pairs; hovering a pair shows its figures; a click selects a product type.
  */
-export function Graph({ network, lit, mode, metric, toolbar, onSelect, children }: GraphProps) {
+export function Graph({ network, lit, layout = network, mode, metric, toolbar, onSelect, children }: GraphProps) {
   const ref = useRef<HTMLDivElement>(null)
   const [{ width, height }, setSize] = useState({ width: 800, height: 600 })
   const [view, setView] = useState(HOME)
@@ -72,7 +77,7 @@ export function Graph({ network, lit, mode, metric, toolbar, onSelect, children 
     }
   }, [])
 
-  const positions = useMemo(() => forceLayout(network.items, network.pairs), [network])
+  const positions = useMemo(() => forceLayout(layout.items, layout.pairs), [layout])
   const inner = { w: width - PAD.x * 2, h: height - PAD.top - PAD.bottom }
   const at = (name: string) => {
     const [x, y] = moved[name] ?? positions[name]

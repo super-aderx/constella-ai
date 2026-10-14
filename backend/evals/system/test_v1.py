@@ -1,6 +1,6 @@
 """A first eval of the v1 agent with DeepEval. Needs the database and OPENAI_API_KEY.
 
-Run from backend/:  uv run --env-file .env deepeval test run tests/test_agent.py
+Run from backend/:  uv run --env-file .env deepeval test run evals/system/test_v1.py
 
 No dataset is needed yet: the data brief the agent was given is the ground truth. Each answer
 gets two scores:
@@ -15,8 +15,8 @@ from deepeval import assert_test
 from deepeval.metrics import BaseMetric, FaithfulnessMetric
 from deepeval.test_case import LLMTestCase
 
-from app import agent
-from app.data import load_network
+from app.infra.data import load_network
+from app.versions import v1 as agent
 
 QUESTIONS = [
     "What are the top 5 product types by revenue?",

@@ -1,0 +1,992 @@
+{
+  "top-revenue": {
+    "reply": {
+      "text": "營收最高的前五個產品類別依序是：衛生紙（89,822）、鮮乳（78,384）、咖啡（75,757）、啤酒（55,119）和洗衣精（41,343）。",
+      "views": [
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "items": [
+        "衛生紙",
+        "鮮乳",
+        "咖啡",
+        "啤酒",
+        "洗衣精"
+      ],
+      "pairs": [],
+      "figures": [
+        {
+          "name": "衛生紙營收",
+          "value": 89822.0,
+          "source": "L1"
+        },
+        {
+          "name": "鮮乳營收",
+          "value": 78384.0,
+          "source": "L1"
+        },
+        {
+          "name": "咖啡營收",
+          "value": 75757.0,
+          "source": "L1"
+        },
+        {
+          "name": "啤酒營收",
+          "value": 55119.0,
+          "source": "L1"
+        },
+        {
+          "name": "洗衣精營收",
+          "value": 41343.0,
+          "source": "L1"
+        }
+      ],
+      "options": []
+    },
+    "segments": [
+      "忠誠客戶",
+      "新客戶",
+      "沉睡客戶",
+      "重要價值客戶"
+    ],
+    "ledger": [
+      {
+        "id": "L1",
+        "tool": "top_items",
+        "args": {
+          "by": "revenue",
+          "limit": 5,
+          "days": null,
+          "segment": null
+        },
+        "result": [
+          {
+            "name": "衛生紙",
+            "orders": 418,
+            "revenue": 89822.0
+          },
+          {
+            "name": "鮮乳",
+            "orders": 548,
+            "revenue": 78384.0
+          },
+          {
+            "name": "咖啡",
+            "orders": 249,
+            "revenue": 75757.0
+          },
+          {
+            "name": "啤酒",
+            "orders": 179,
+            "revenue": 55119.0
+          },
+          {
+            "name": "洗衣精",
+            "orders": 167,
+            "revenue": 41343.0
+          }
+        ]
+      }
+    ]
+  },
+  "top-orders-90d": {
+    "reply": {
+      "text": "最近 90 天，出現在最多購物籃中的五個產品類別依序是：鮮乳（387 籃）、衛生紙（311 籃）、可樂（229 籃）、洋芋片（214 籃）和咖啡（186 籃）。",
+      "views": [
+        {
+          "days": 90,
+          "segment": null
+        }
+      ],
+      "items": [
+        "鮮乳",
+        "衛生紙",
+        "可樂",
+        "洋芋片",
+        "咖啡"
+      ],
+      "pairs": [],
+      "figures": [
+        {
+          "name": "鮮乳訂單數",
+          "value": 387.0,
+          "source": "L1"
+        },
+        {
+          "name": "衛生紙訂單數",
+          "value": 311.0,
+          "source": "L1"
+        },
+        {
+          "name": "可樂訂單數",
+          "value": 229.0,
+          "source": "L1"
+        },
+        {
+          "name": "洋芋片訂單數",
+          "value": 214.0,
+          "source": "L1"
+        },
+        {
+          "name": "咖啡訂單數",
+          "value": 186.0,
+          "source": "L1"
+        }
+      ],
+      "options": []
+    },
+    "segments": [
+      "忠誠客戶",
+      "新客戶",
+      "沉睡客戶",
+      "重要價值客戶"
+    ],
+    "ledger": [
+      {
+        "id": "L1",
+        "tool": "top_items",
+        "args": {
+          "by": "orders",
+          "limit": 5,
+          "days": 90,
+          "segment": null
+        },
+        "result": [
+          {
+            "name": "鮮乳",
+            "orders": 387,
+            "revenue": 54688.0
+          },
+          {
+            "name": "衛生紙",
+            "orders": 311,
+            "revenue": 65840.0
+          },
+          {
+            "name": "可樂",
+            "orders": 229,
+            "revenue": 9824.0
+          },
+          {
+            "name": "洋芋片",
+            "orders": 214,
+            "revenue": 12909.0
+          },
+          {
+            "name": "咖啡",
+            "orders": 186,
+            "revenue": 58409.0
+          }
+        ]
+      }
+    ]
+  },
+  "top-pair": {
+    "reply": {
+      "text": "吐司和鮮乳最常被一起購買，共同出現在 186 個購物籃中。",
+      "views": [
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "items": [
+        "吐司",
+        "鮮乳"
+      ],
+      "pairs": [
+        {
+          "a": "吐司",
+          "b": "鮮乳"
+        }
+      ],
+      "figures": [
+        {
+          "name": "共同購買的購物籃數",
+          "value": 186.0,
+          "source": "L1"
+        }
+      ],
+      "options": []
+    },
+    "segments": [
+      "忠誠客戶",
+      "新客戶",
+      "沉睡客戶",
+      "重要價值客戶"
+    ],
+    "ledger": [
+      {
+        "id": "L1",
+        "tool": "top_pairs",
+        "args": {
+          "by": "co_orders",
+          "min_co_orders": 1,
+          "limit": 1,
+          "days": null,
+          "segment": null
+        },
+        "result": [
+          {
+            "a": "吐司",
+            "b": "鮮乳",
+            "coOrders": 186,
+            "lift": 2.078
+          }
+        ]
+      }
+    ]
+  },
+  "top-lift-loyal": {
+    "reply": {
+      "text": "忠誠客戶中，提升度最高的產品類別組合是洗衣精與洗髮精，提升度為 5.628（共同出現在 19 個購物籃中）。",
+      "views": [
+        {
+          "days": null,
+          "segment": "忠誠客戶"
+        }
+      ],
+      "items": [
+        "洗衣精",
+        "洗髮精"
+      ],
+      "pairs": [
+        {
+          "a": "洗衣精",
+          "b": "洗髮精"
+        }
+      ],
+      "figures": [
+        {
+          "name": "提升度",
+          "value": 5.628,
+          "source": "L1"
+        },
+        {
+          "name": "共同購物籃數",
+          "value": 19.0,
+          "source": "L1"
+        }
+      ],
+      "options": []
+    },
+    "segments": [
+      "忠誠客戶",
+      "新客戶",
+      "沉睡客戶",
+      "重要價值客戶"
+    ],
+    "ledger": [
+      {
+        "id": "L1",
+        "tool": "top_pairs",
+        "args": {
+          "by": "lift",
+          "min_co_orders": 1,
+          "limit": 1,
+          "days": null,
+          "segment": "忠誠客戶"
+        },
+        "result": [
+          {
+            "a": "洗衣精",
+            "b": "洗髮精",
+            "coOrders": 19,
+            "lift": 5.628
+          }
+        ]
+      }
+    ]
+  },
+  "partners-coffee": {
+    "reply": {
+      "text": "買咖啡時，最常一起買的產品類別是鮮乳，共同出現在 93 個購物籃中。",
+      "views": [
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "items": [
+        "咖啡",
+        "鮮乳"
+      ],
+      "pairs": [
+        {
+          "a": "咖啡",
+          "b": "鮮乳"
+        }
+      ],
+      "figures": [
+        {
+          "name": "共同購買購物籃數",
+          "value": 93.0,
+          "source": "L2"
+        }
+      ],
+      "options": []
+    },
+    "segments": [
+      "忠誠客戶",
+      "新客戶",
+      "沉睡客戶",
+      "重要價值客戶"
+    ],
+    "ledger": [
+      {
+        "id": "L1",
+        "tool": "find_item",
+        "args": {
+          "text": "咖啡",
+          "days": null,
+          "segment": null
+        },
+        "result": {
+          "types": [
+            {
+              "type": "咖啡",
+              "on_graph": true
+            }
+          ],
+          "products": [
+            {
+              "product": "即溶咖啡 100g",
+              "type": "咖啡",
+              "type_on_graph": true
+            },
+            {
+              "product": "咖啡豆 227g",
+              "type": "咖啡",
+              "type_on_graph": true
+            },
+            {
+              "product": "濾掛咖啡 20入",
+              "type": "咖啡",
+              "type_on_graph": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "L2",
+        "tool": "item_neighbors",
+        "args": {
+          "item": "咖啡",
+          "by": "co_orders",
+          "limit": 1,
+          "days": null,
+          "segment": null
+        },
+        "result": [
+          {
+            "item": "鮮乳",
+            "coOrders": 93,
+            "lift": 1.022
+          }
+        ]
+      }
+    ]
+  },
+  "bridge": {
+    "reply": {
+      "text": "咖啡連結了最多其他產品類別，在圖上連結 6 個類別。",
+      "views": [
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "items": [
+        "咖啡"
+      ],
+      "pairs": [],
+      "figures": [
+        {
+          "name": "links",
+          "value": 6.0,
+          "source": "L1"
+        }
+      ],
+      "options": []
+    },
+    "segments": [
+      "忠誠客戶",
+      "新客戶",
+      "沉睡客戶",
+      "重要價值客戶"
+    ],
+    "ledger": [
+      {
+        "id": "L1",
+        "tool": "central_items",
+        "args": {
+          "by": "betweenness",
+          "limit": 1,
+          "days": null,
+          "segment": null
+        },
+        "result": [
+          {
+            "item": "咖啡",
+            "betweenness": 0.303,
+            "links": 6
+          }
+        ]
+      }
+    ]
+  },
+  "top-group": {
+    "reply": {
+      "text": "營收最高的群組是「鮮乳 & 咖啡」，營收為 215942。它包含鮮乳、咖啡、吐司、雞蛋和優格。",
+      "views": [
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "items": [
+        "鮮乳",
+        "咖啡",
+        "吐司",
+        "雞蛋",
+        "優格"
+      ],
+      "pairs": [],
+      "figures": [
+        {
+          "name": "群組營收",
+          "value": 215942.0,
+          "source": "L1"
+        }
+      ],
+      "options": []
+    },
+    "segments": [
+      "忠誠客戶",
+      "新客戶",
+      "沉睡客戶",
+      "重要價值客戶"
+    ],
+    "ledger": [
+      {
+        "id": "L1",
+        "tool": "communities",
+        "args": {
+          "days": null,
+          "segment": null
+        },
+        "result": [
+          {
+            "group": "鮮乳 & 咖啡",
+            "members": [
+              "鮮乳",
+              "咖啡",
+              "吐司",
+              "雞蛋",
+              "優格"
+            ],
+            "revenue": 215942
+          },
+          {
+            "group": "可樂 & 洋芋片",
+            "members": [
+              "可樂",
+              "洋芋片",
+              "餅乾",
+              "啤酒",
+              "泡麵"
+            ],
+            "revenue": 121499
+          },
+          {
+            "group": "衛生紙 & 洗衣精",
+            "members": [
+              "衛生紙",
+              "洗衣精",
+              "洗髮精"
+            ],
+            "revenue": 167312
+          }
+        ]
+      }
+    ]
+  },
+  "top-revenue-english": {
+    "reply": {
+      "text": "全期間、所有客戶中，按營收排名前五的商品類型為：衛生紙（89,822）、鮮乳（78,384）、咖啡（75,757）、啤酒（55,119）及洗衣精（41,343）。",
+      "views": [
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "items": [
+        "衛生紙",
+        "鮮乳",
+        "咖啡",
+        "啤酒",
+        "洗衣精"
+      ],
+      "pairs": [],
+      "figures": [
+        {
+          "name": "衛生紙營收",
+          "value": 89822.0,
+          "source": "L1"
+        },
+        {
+          "name": "鮮乳營收",
+          "value": 78384.0,
+          "source": "L1"
+        },
+        {
+          "name": "咖啡營收",
+          "value": 75757.0,
+          "source": "L1"
+        },
+        {
+          "name": "啤酒營收",
+          "value": 55119.0,
+          "source": "L1"
+        },
+        {
+          "name": "洗衣精營收",
+          "value": 41343.0,
+          "source": "L1"
+        }
+      ],
+      "options": []
+    },
+    "segments": [
+      "忠誠客戶",
+      "新客戶",
+      "沉睡客戶",
+      "重要價值客戶"
+    ],
+    "ledger": [
+      {
+        "id": "L1",
+        "tool": "top_items",
+        "args": {
+          "by": "revenue",
+          "limit": 5,
+          "days": null,
+          "segment": null
+        },
+        "result": [
+          {
+            "name": "衛生紙",
+            "orders": 418,
+            "revenue": 89822.0
+          },
+          {
+            "name": "鮮乳",
+            "orders": 548,
+            "revenue": 78384.0
+          },
+          {
+            "name": "咖啡",
+            "orders": 249,
+            "revenue": 75757.0
+          },
+          {
+            "name": "啤酒",
+            "orders": 179,
+            "revenue": 55119.0
+          },
+          {
+            "name": "洗衣精",
+            "orders": 167,
+            "revenue": 41343.0
+          }
+        ]
+      }
+    ]
+  },
+  "yes-no-milk-tissue": {
+    "reply": {
+      "text": "否。鮮乳和衛生紙同籃購買的頻率低於隨機預期；兩者同籃 80 次，lift 為 0.524（低於 1）。",
+      "views": [
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "items": [
+        "鮮乳",
+        "衛生紙"
+      ],
+      "pairs": [
+        {
+          "a": "鮮乳",
+          "b": "衛生紙"
+        }
+      ],
+      "figures": [
+        {
+          "name": "同籃次數",
+          "value": 80.0,
+          "source": "L3"
+        },
+        {
+          "name": "Lift",
+          "value": 0.524,
+          "source": "L3"
+        }
+      ],
+      "options": []
+    },
+    "segments": [
+      "忠誠客戶",
+      "新客戶",
+      "沉睡客戶",
+      "重要價值客戶"
+    ],
+    "ledger": [
+      {
+        "id": "L1",
+        "tool": "find_item",
+        "args": {
+          "text": "鮮乳",
+          "days": null,
+          "segment": null
+        },
+        "result": {
+          "types": [
+            {
+              "type": "鮮乳",
+              "on_graph": true
+            }
+          ],
+          "products": [
+            {
+              "product": "低脂鮮乳 936ml",
+              "type": "鮮乳",
+              "type_on_graph": true
+            },
+            {
+              "product": "瑞穗鮮乳 930ml",
+              "type": "鮮乳",
+              "type_on_graph": true
+            },
+            {
+              "product": "鮮乳 1857ml",
+              "type": "鮮乳",
+              "type_on_graph": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "L2",
+        "tool": "find_item",
+        "args": {
+          "text": "衛生紙",
+          "days": null,
+          "segment": null
+        },
+        "result": {
+          "types": [
+            {
+              "type": "衛生紙",
+              "on_graph": true
+            }
+          ],
+          "products": [
+            {
+              "product": "抽取式衛生紙 12包",
+              "type": "衛生紙",
+              "type_on_graph": true
+            },
+            {
+              "product": "抽取式衛生紙 24包",
+              "type": "衛生紙",
+              "type_on_graph": true
+            },
+            {
+              "product": "捲筒衛生紙 12捲",
+              "type": "衛生紙",
+              "type_on_graph": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "L3",
+        "tool": "pair_stats",
+        "args": {
+          "a": "鮮乳",
+          "b": "衛生紙",
+          "days": null,
+          "segment": null
+        },
+        "result": {
+          "a": "衛生紙",
+          "b": "鮮乳",
+          "coOrders": 80,
+          "lift": 0.524
+        }
+      }
+    ]
+  },
+  "yes-no-detergent-shampoo": {
+    "reply": {
+      "text": "是。洗衣精和洗髮精一起出現在 73 個購物籃中，lift 為 5.204，表示它們同籃購買的頻率高於隨機預期。",
+      "views": [
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "items": [
+        "洗衣精",
+        "洗髮精"
+      ],
+      "pairs": [
+        {
+          "a": "洗衣精",
+          "b": "洗髮精"
+        }
+      ],
+      "figures": [
+        {
+          "name": "共同購買購物籃數",
+          "value": 73.0,
+          "source": "L2"
+        },
+        {
+          "name": "Lift",
+          "value": 5.204,
+          "source": "L2"
+        }
+      ],
+      "options": []
+    },
+    "segments": [
+      "忠誠客戶",
+      "新客戶",
+      "沉睡客戶",
+      "重要價值客戶"
+    ],
+    "ledger": [
+      {
+        "id": "L1",
+        "tool": "find_item",
+        "args": {
+          "text": "洗衣精",
+          "days": null,
+          "segment": null
+        },
+        "result": {
+          "types": [
+            {
+              "type": "洗衣精",
+              "on_graph": true
+            },
+            {
+              "type": "洗髮精",
+              "on_graph": true
+            }
+          ],
+          "products": [
+            {
+              "product": "洗衣精 2L",
+              "type": "洗衣精",
+              "type_on_graph": true
+            },
+            {
+              "product": "洗衣精補充包 1.5L",
+              "type": "洗衣精",
+              "type_on_graph": true
+            },
+            {
+              "product": "濃縮洗衣精 1.8L",
+              "type": "洗衣精",
+              "type_on_graph": true
+            },
+            {
+              "product": "去屑洗髮精 400ml",
+              "type": "洗髮精",
+              "type_on_graph": true
+            },
+            {
+              "product": "洗髮精 700ml",
+              "type": "洗髮精",
+              "type_on_graph": true
+            },
+            {
+              "product": "護色洗髮精 500ml",
+              "type": "洗髮精",
+              "type_on_graph": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "L2",
+        "tool": "pair_stats",
+        "args": {
+          "a": "洗衣精",
+          "b": "洗髮精",
+          "days": null,
+          "segment": null
+        },
+        "result": {
+          "a": "洗衣精",
+          "b": "洗髮精",
+          "coOrders": 73,
+          "lift": 5.204
+        }
+      }
+    ]
+  },
+  "one-figure": {
+    "reply": {
+      "text": "咖啡的營收是 75,757。",
+      "views": [
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "items": [
+        "咖啡"
+      ],
+      "pairs": [],
+      "figures": [
+        {
+          "name": "咖啡營收",
+          "value": 75757.0,
+          "source": "L2"
+        }
+      ],
+      "options": []
+    },
+    "segments": [
+      "忠誠客戶",
+      "新客戶",
+      "沉睡客戶",
+      "重要價值客戶"
+    ],
+    "ledger": [
+      {
+        "id": "L1",
+        "tool": "find_item",
+        "args": {
+          "text": "咖啡",
+          "days": null,
+          "segment": null
+        },
+        "result": {
+          "types": [
+            {
+              "type": "咖啡",
+              "on_graph": true
+            }
+          ],
+          "products": [
+            {
+              "product": "即溶咖啡 100g",
+              "type": "咖啡",
+              "type_on_graph": true
+            },
+            {
+              "product": "咖啡豆 227g",
+              "type": "咖啡",
+              "type_on_graph": true
+            },
+            {
+              "product": "濾掛咖啡 20入",
+              "type": "咖啡",
+              "type_on_graph": true
+            }
+          ]
+        }
+      },
+      {
+        "id": "L2",
+        "tool": "top_items",
+        "args": {
+          "by": "revenue",
+          "limit": 20,
+          "days": null,
+          "segment": null
+        },
+        "result": [
+          {
+            "name": "衛生紙",
+            "orders": 418,
+            "revenue": 89822.0
+          },
+          {
+            "name": "鮮乳",
+            "orders": 548,
+            "revenue": 78384.0
+          },
+          {
+            "name": "咖啡",
+            "orders": 249,
+            "revenue": 75757.0
+          },
+          {
+            "name": "啤酒",
+            "orders": 179,
+            "revenue": 55119.0
+          },
+          {
+            "name": "洗衣精",
+            "orders": 167,
+            "revenue": 41343.0
+          },
+          {
+            "name": "洗髮精",
+            "orders": 126,
+            "revenue": 36147.0
+          },
+          {
+            "name": "雞蛋",
+            "orders": 223,
+            "revenue": 28384.0
+          },
+          {
+            "name": "泡麵",
+            "orders": 158,
+            "revenue": 21381.0
+          },
+          {
+            "name": "紅酒",
+            "orders": 28,
+            "revenue": 21162.0
+          },
+          {
+            "name": "優格",
+            "orders": 193,
+            "revenue": 19968.0
+          },
+          {
+            "name": "洋芋片",
+            "orders": 281,
+            "revenue": 17212.0
+          },
+          {
+            "name": "餅乾",
+            "orders": 193,
+            "revenue": 15315.0
+          },
+          {
+            "name": "吐司",
+            "orders": 245,
+            "revenue": 13449.0
+          },
+          {
+            "name": "可樂",
+            "orders": 289,
+            "revenue": 12472.0
+          }
+        ]
+      }
+    ]
+  }
+}

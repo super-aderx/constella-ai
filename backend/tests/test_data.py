@@ -2,8 +2,8 @@
 
 import pytest
 
-from app import data
-from app.data import build_network
+from app.infra import data
+from app.infra.data import build_network
 
 ITEMS = [
     {"name": name, "orders": orders, "revenue": revenue}
@@ -58,9 +58,9 @@ def test_pairs_come_strongest_first():
 @pytest.mark.parametrize(
     ("baskets", "expected"),
     [
-        (11431, 60),  # all the data: the threshold as written
-        (5549, 29),  # about half the baskets, half the threshold
-        (389, 5),  # 2 by share, held at the floor
+        (11431, 30),  # all the data: the threshold as written
+        (5549, 15),  # about half the baskets, half the threshold
+        (389, 5),  # 1 by share, held at the floor
         (0, 5),
     ],
 )

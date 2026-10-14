@@ -20,3 +20,10 @@ htmlcov/
 # DeepEval run output
 .deepeval/
 .deepeval_telemetry.txt
+
+# Generated sample data (run evals/make_sample.py)
+evals/data/invoice.csv
+
+# Eval reports
+evals/scientist-charts.md
+evals/writer-puns.md

@@ -34,7 +34,7 @@ pass_filenames = false
 [[repos.hooks]]
 id = "sqlfluff-fix"
 name = "sqlfluff fix"
-entry = "uv run --directory backend sqlfluff fix app/sql"
+entry = "uv run --directory backend sqlfluff fix app/infra/sql"
 language = "system"
 files = '^backend/.*\.sql$'
 pass_filenames = false
@@ -42,7 +42,7 @@ pass_filenames = false
 [[repos.hooks]]
 id = "sqlfluff-lint"
 name = "sqlfluff lint"
-entry = "uv run --directory backend sqlfluff lint app/sql"
+entry = "uv run --directory backend sqlfluff lint app/infra/sql"
 language = "system"
 files = '^backend/.*\.sql$'
 pass_filenames = false

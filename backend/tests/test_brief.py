@@ -6,8 +6,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from app import agent
-from app.data import build_network
+from app.infra.data import build_network
+from app.versions import v1 as agent
 
 ITEMS = [
     {"name": name, "orders": orders, "revenue": revenue}

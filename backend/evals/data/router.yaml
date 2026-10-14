@@ -1,0 +1,32 @@
+# The router set: questions labelled with the plan the router should choose.
+#   route     answer (the store's sales) or refuse (anything else)
+#   strategy  whether the user wants something to do: a campaign, a discount, a slogan
+# A question about something that is not in the data is still "answer": the analyst says so.
+
+- {input: "營收最高的前五個產品類別是哪些？", route: answer, strategy: false}
+- {input: "買咖啡時最常一起買什麼？", route: answer, strategy: false}
+- {input: "哪三個產品類別最常被一起購買？", route: answer, strategy: false}
+- {input: "比較忠誠客戶和新客戶買咖啡時的搭配有什麼不同", route: answer, strategy: false}
+- {input: "鮮乳和衛生紙一起購買的頻率是否高於隨機預期？", route: answer, strategy: false}
+- {input: "我想知道堅果穀物飲的跨產品推薦", route: answer, strategy: false}
+- {input: "哪個群組的營收最高？", route: answer, strategy: false}
+- {input: "瑞穗鮮乳賣得怎麼樣？", route: answer, strategy: false}
+- {input: "最近 30 天哪些類別賣得最好", route: answer, strategy: false}
+- {input: "寵物食品的營收排第幾？", route: answer, strategy: false}
+- {input: "What sells with beer?", route: answer, strategy: false}
+
+- {input: "幫我設計一個咖啡的促銷活動", route: answer, strategy: true}
+- {input: "為洗衣精和洗髮精想一句行銷標語", route: answer, strategy: true}
+- {input: "針對忠誠客戶規劃一個組合優惠", route: answer, strategy: true}
+- {input: "哪些產品適合一起打折？給我一個折扣方案", route: answer, strategy: true}
+- {input: "幫新客戶設計週末促銷", route: answer, strategy: true}
+- {input: "用最常一起買的三個類別做一個組合包活動", route: answer, strategy: true}
+- {input: "想提升啤酒銷量，有什麼行銷建議？", route: answer, strategy: true}
+- {input: "Plan a discount campaign for milk", route: answer, strategy: true}
+
+- {input: "幫我寫一首關於海的詩", route: refuse, strategy: false}
+- {input: "台北明天天氣如何？", route: refuse, strategy: false}
+- {input: "Python 怎麼排序 list？", route: refuse, strategy: false}
+- {input: "蘋果公司的股價是多少？", route: refuse, strategy: false}
+- {input: "幫我翻譯這句英文：good morning", route: refuse, strategy: false}
+- {input: "誰是美國總統？", route: refuse, strategy: false}

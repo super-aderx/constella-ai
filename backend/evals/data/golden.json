@@ -1,0 +1,3058 @@
+{
+  "as_of": "2026-09-29 22:00:00",
+  "data_sha256": "2f43e21fb7bd76bbcd7e7b3744c3140950b0504967c2790324bf7a97861be414",
+  "cases": [
+    {
+      "id": "q01-all",
+      "template": 1,
+      "kind": "factual",
+      "split": "dev",
+      "input": "營收最高的前五個產品類別是哪些？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "invented_ranking",
+      "expected_items": [
+        "衛生紙",
+        "鮮乳",
+        "咖啡",
+        "啤酒",
+        "洗衣精"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "top_items",
+          "args": {
+            "by": "revenue",
+            "days": null,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q01-vip",
+      "template": 1,
+      "kind": "factual",
+      "split": "dev",
+      "input": "重要價值客戶營收最高的前五個產品類別是哪些？",
+      "filters": {
+        "days": null,
+        "segment": "重要價值客戶"
+      },
+      "fills": {},
+      "catches": "invented_ranking",
+      "expected_items": [
+        "衛生紙",
+        "鮮乳",
+        "咖啡",
+        "啤酒",
+        "洗髮精"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": "重要價值客戶"
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "top_items",
+          "args": {
+            "by": "revenue",
+            "days": null,
+            "segment": "重要價值客戶"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q01-30d",
+      "template": 1,
+      "kind": "factual",
+      "split": "dev",
+      "input": "最近 30 天營收最高的前五個產品類別是哪些？",
+      "filters": {
+        "days": 30,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "invented_ranking",
+      "expected_items": [
+        "衛生紙",
+        "咖啡",
+        "鮮乳",
+        "啤酒",
+        "洗衣精"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": 30,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "top_items",
+          "args": {
+            "by": "revenue",
+            "days": 30,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q01-new",
+      "template": 1,
+      "kind": "factual",
+      "split": "dev",
+      "input": "新客戶營收最高的前五個產品類別是哪些？",
+      "filters": {
+        "days": null,
+        "segment": "新客戶"
+      },
+      "fills": {},
+      "catches": "invented_ranking",
+      "expected_items": [
+        "咖啡",
+        "鮮乳",
+        "衛生紙",
+        "啤酒",
+        "洗衣精"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": "新客戶"
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "top_items",
+          "args": {
+            "by": "revenue",
+            "days": null,
+            "segment": "新客戶"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q01-trap",
+      "template": 1,
+      "kind": "trap",
+      "split": "dev",
+      "input": "寵物食品的營收在所有產品類別中排第幾？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "invented_ranking",
+      "expected_items": [],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "trap": "missing",
+      "missing": "寵物食品",
+      "expected_tools": [
+        {
+          "name": "find_item",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "id": "q01-switch",
+      "template": 1,
+      "kind": "factual",
+      "split": "dev",
+      "input": "最近 30 天營收最高的前五個產品類別是哪些？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "invented_ranking",
+      "expected_items": [
+        "衛生紙",
+        "咖啡",
+        "鮮乳",
+        "啤酒",
+        "洗衣精"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": 30,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "top_items",
+          "args": {
+            "by": "revenue",
+            "days": 30,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q02-all",
+      "template": 2,
+      "kind": "factual",
+      "split": "dev",
+      "input": "哪兩個產品類別最常被一起購買？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "best_sellers_as_pair",
+      "expected_items": [],
+      "expected_pairs": [
+        [
+          "吐司",
+          "鮮乳"
+        ]
+      ],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "top_pairs",
+          "args": {
+            "by": "co_orders",
+            "days": null,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q02-30d",
+      "template": 2,
+      "kind": "factual",
+      "split": "dev",
+      "input": "最近 30 天，哪兩個產品類別最常被一起購買？",
+      "filters": {
+        "days": 30,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "best_sellers_as_pair",
+      "expected_items": [],
+      "expected_pairs": [
+        [
+          "優格",
+          "鮮乳"
+        ]
+      ],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": 30,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "top_pairs",
+          "args": {
+            "by": "co_orders",
+            "days": 30,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q02-loyal",
+      "template": 2,
+      "kind": "factual",
+      "split": "dev",
+      "input": "忠誠客戶最常一起購買哪兩個產品類別？",
+      "filters": {
+        "days": null,
+        "segment": "忠誠客戶"
+      },
+      "fills": {},
+      "catches": "best_sellers_as_pair",
+      "expected_items": [],
+      "expected_pairs": [
+        [
+          "吐司",
+          "鮮乳"
+        ]
+      ],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": "忠誠客戶"
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "top_pairs",
+          "args": {
+            "by": "co_orders",
+            "days": null,
+            "segment": "忠誠客戶"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q02-90d",
+      "template": 2,
+      "kind": "factual",
+      "split": "dev",
+      "input": "最近 90 天，哪兩個產品類別最常被一起購買？",
+      "filters": {
+        "days": 90,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "best_sellers_as_pair",
+      "expected_items": [],
+      "expected_pairs": [
+        [
+          "吐司",
+          "鮮乳"
+        ]
+      ],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": 90,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "top_pairs",
+          "args": {
+            "by": "co_orders",
+            "days": 90,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q02-trap",
+      "template": 2,
+      "kind": "trap",
+      "split": "dev",
+      "input": "哪個產品類別最常和冷凍水餃一起購買？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "best_sellers_as_pair",
+      "expected_items": [],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "trap": "missing",
+      "missing": "冷凍水餃",
+      "expected_tools": [
+        {
+          "name": "find_item",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "id": "q02-switch",
+      "template": 2,
+      "kind": "factual",
+      "split": "dev",
+      "input": "最近 30 天，哪兩個產品類別最常被一起購買？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "best_sellers_as_pair",
+      "expected_items": [],
+      "expected_pairs": [
+        [
+          "優格",
+          "鮮乳"
+        ]
+      ],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": 30,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "top_pairs",
+          "args": {
+            "by": "co_orders",
+            "days": 30,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q03-all",
+      "template": 3,
+      "kind": "factual",
+      "split": "dev",
+      "input": "哪兩個產品類別的提升度最高？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "wrong_lift_ranking",
+      "expected_items": [],
+      "expected_pairs": [
+        [
+          "洗衣精",
+          "洗髮精"
+        ]
+      ],
+      "expected_text": [],
+      "expected_figures": [
+        {
+          "name": "lift",
+          "value": 5.204,
+          "of": [
+            "洗衣精",
+            "洗髮精"
+          ]
+        }
+      ],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "top_pairs",
+          "args": {
+            "by": "lift",
+            "days": null,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q03-90d",
+      "template": 3,
+      "kind": "factual",
+      "split": "dev",
+      "input": "最近 90 天，哪兩個產品類別的提升度最高？",
+      "filters": {
+        "days": 90,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "wrong_lift_ranking",
+      "expected_items": [],
+      "expected_pairs": [
+        [
+          "洗衣精",
+          "洗髮精"
+        ]
+      ],
+      "expected_text": [],
+      "expected_figures": [
+        {
+          "name": "lift",
+          "value": 5.7,
+          "of": [
+            "洗衣精",
+            "洗髮精"
+          ]
+        }
+      ],
+      "expected_views": [
+        {
+          "days": 90,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "top_pairs",
+          "args": {
+            "by": "lift",
+            "days": 90,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q03-loyal",
+      "template": 3,
+      "kind": "factual",
+      "split": "dev",
+      "input": "忠誠客戶中，哪兩個產品類別的提升度最高？",
+      "filters": {
+        "days": null,
+        "segment": "忠誠客戶"
+      },
+      "fills": {},
+      "catches": "wrong_lift_ranking",
+      "expected_items": [],
+      "expected_pairs": [
+        [
+          "紅酒",
+          "起司"
+        ]
+      ],
+      "expected_text": [],
+      "expected_figures": [
+        {
+          "name": "lift",
+          "value": 21.99,
+          "of": [
+            "紅酒",
+            "起司"
+          ]
+        }
+      ],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": "忠誠客戶"
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "top_pairs",
+          "args": {
+            "by": "lift",
+            "days": null,
+            "segment": "忠誠客戶"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q03-dormant",
+      "template": 3,
+      "kind": "factual",
+      "split": "dev",
+      "input": "沉睡客戶中，哪兩個產品類別的提升度最高？",
+      "filters": {
+        "days": null,
+        "segment": "沉睡客戶"
+      },
+      "fills": {},
+      "catches": "wrong_lift_ranking",
+      "expected_items": [],
+      "expected_pairs": [
+        [
+          "洗衣精",
+          "洗髮精"
+        ]
+      ],
+      "expected_text": [],
+      "expected_figures": [
+        {
+          "name": "lift",
+          "value": 5.086,
+          "of": [
+            "洗衣精",
+            "洗髮精"
+          ]
+        }
+      ],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": "沉睡客戶"
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "top_pairs",
+          "args": {
+            "by": "lift",
+            "days": null,
+            "segment": "沉睡客戶"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q03-trap",
+      "template": 3,
+      "kind": "trap",
+      "split": "dev",
+      "input": "尿布和哪個產品類別的提升度最高？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "wrong_lift_ranking",
+      "expected_items": [],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "trap": "missing",
+      "missing": "尿布",
+      "expected_tools": [
+        {
+          "name": "find_item",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "id": "q03-switch",
+      "template": 3,
+      "kind": "factual",
+      "split": "dev",
+      "input": "新客戶中，哪兩個產品類別的提升度最高？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "wrong_lift_ranking",
+      "expected_items": [],
+      "expected_pairs": [
+        [
+          "洗衣精",
+          "洗髮精"
+        ]
+      ],
+      "expected_text": [],
+      "expected_figures": [
+        {
+          "name": "lift",
+          "value": 5.344,
+          "of": [
+            "洗衣精",
+            "洗髮精"
+          ]
+        }
+      ],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": "新客戶"
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "top_pairs",
+          "args": {
+            "by": "lift",
+            "days": null,
+            "segment": "新客戶"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q04-all-coffee",
+      "template": 4,
+      "kind": "factual",
+      "split": "dev",
+      "input": "買咖啡時，最常一起買哪個產品類別？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {
+        "item": "咖啡"
+      },
+      "catches": "wrong_partner",
+      "expected_items": [
+        "鮮乳"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "item_neighbors",
+          "args": {
+            "by": "co_orders",
+            "item": "咖啡",
+            "days": null,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q04-loyal-coffee",
+      "template": 4,
+      "kind": "factual",
+      "split": "dev",
+      "input": "忠誠客戶買咖啡時，最常一起買哪個產品類別？",
+      "filters": {
+        "days": null,
+        "segment": "忠誠客戶"
+      },
+      "fills": {
+        "item": "咖啡"
+      },
+      "catches": "wrong_partner",
+      "expected_items": [
+        "吐司"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": "忠誠客戶"
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "item_neighbors",
+          "args": {
+            "by": "co_orders",
+            "item": "咖啡",
+            "days": null,
+            "segment": "忠誠客戶"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q04-all-beer",
+      "template": 4,
+      "kind": "factual",
+      "split": "dev",
+      "input": "買啤酒時，最常一起買哪個產品類別？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {
+        "item": "啤酒"
+      },
+      "catches": "wrong_partner",
+      "expected_items": [
+        "洋芋片"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "item_neighbors",
+          "args": {
+            "by": "co_orders",
+            "item": "啤酒",
+            "days": null,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q04-30d-milk",
+      "template": 4,
+      "kind": "factual",
+      "split": "dev",
+      "input": "最近 30 天，買鮮乳時最常一起買哪個產品類別？",
+      "filters": {
+        "days": 30,
+        "segment": null
+      },
+      "fills": {
+        "item": "鮮乳"
+      },
+      "catches": "wrong_partner",
+      "expected_items": [
+        "優格"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": 30,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "item_neighbors",
+          "args": {
+            "by": "co_orders",
+            "item": "鮮乳",
+            "days": 30,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q04-trap",
+      "template": 4,
+      "kind": "trap",
+      "split": "dev",
+      "input": "忠誠客戶買貓砂時，最常一起買哪個產品類別？",
+      "filters": {
+        "days": null,
+        "segment": "忠誠客戶"
+      },
+      "fills": {},
+      "catches": "wrong_partner",
+      "expected_items": [],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "trap": "missing",
+      "missing": "貓砂",
+      "expected_tools": [
+        {
+          "name": "find_item",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "id": "q04-switch",
+      "template": 4,
+      "kind": "factual",
+      "split": "dev",
+      "input": "忠誠客戶買咖啡時，最常一起買哪個產品類別？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {
+        "item": "咖啡"
+      },
+      "catches": "wrong_partner",
+      "expected_items": [
+        "吐司"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": "忠誠客戶"
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "item_neighbors",
+          "args": {
+            "by": "co_orders",
+            "item": "咖啡",
+            "days": null,
+            "segment": "忠誠客戶"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q07-all",
+      "template": 7,
+      "kind": "factual",
+      "split": "dev",
+      "input": "哪個產品類別連結了最多其他產品類別？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "best_seller_as_hub",
+      "expected_items": [
+        "咖啡"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "central_items",
+          "args": {
+            "by": "betweenness",
+            "days": null,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q07-90d",
+      "template": 7,
+      "kind": "factual",
+      "split": "dev",
+      "input": "最近 90 天，哪個產品類別連結了最多其他產品類別？",
+      "filters": {
+        "days": 90,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "best_seller_as_hub",
+      "expected_items": [
+        "咖啡"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": 90,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "central_items",
+          "args": {
+            "by": "betweenness",
+            "days": 90,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q07-30d",
+      "template": 7,
+      "kind": "factual",
+      "split": "dev",
+      "input": "最近 30 天，哪個產品類別是連結其他類別的橋樑？",
+      "filters": {
+        "days": 30,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "best_seller_as_hub",
+      "expected_items": [
+        "咖啡"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": 30,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "central_items",
+          "args": {
+            "by": "betweenness",
+            "days": 30,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q07-vip",
+      "template": 7,
+      "kind": "factual",
+      "split": "dev",
+      "input": "重要價值客戶中，哪個產品類別是連結其他類別的橋樑？",
+      "filters": {
+        "days": null,
+        "segment": "重要價值客戶"
+      },
+      "fills": {},
+      "catches": "best_seller_as_hub",
+      "expected_items": [
+        "咖啡"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": "重要價值客戶"
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "central_items",
+          "args": {
+            "by": "betweenness",
+            "days": null,
+            "segment": "重要價值客戶"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q07-trap",
+      "template": 7,
+      "kind": "trap",
+      "split": "dev",
+      "input": "保健食品連結了哪些產品類別？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "best_seller_as_hub",
+      "expected_items": [],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "trap": "missing",
+      "missing": "保健食品",
+      "expected_tools": [
+        {
+          "name": "find_item",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "id": "q07-switch",
+      "template": 7,
+      "kind": "factual",
+      "split": "dev",
+      "input": "最近 90 天，哪個產品類別連結了最多其他產品類別？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "best_seller_as_hub",
+      "expected_items": [
+        "咖啡"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": 90,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "central_items",
+          "args": {
+            "by": "betweenness",
+            "days": 90,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q08-all",
+      "template": 8,
+      "kind": "factual",
+      "split": "dev",
+      "input": "哪個群組的營收最高？它包含哪些產品類別？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "wrong_group_sum",
+      "expected_items": [
+        "可樂",
+        "咖啡",
+        "啤酒",
+        "泡麵",
+        "洋芋片",
+        "餅乾"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [
+        {
+          "name": "revenue",
+          "value": 197256,
+          "of": [
+            "可樂",
+            "咖啡",
+            "啤酒",
+            "泡麵",
+            "洋芋片",
+            "餅乾"
+          ]
+        }
+      ],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "communities",
+          "args": {
+            "days": null,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q08-30d",
+      "template": 8,
+      "kind": "factual",
+      "split": "dev",
+      "input": "最近 30 天，哪個群組的營收最高？它包含哪些產品類別？",
+      "filters": {
+        "days": 30,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "wrong_group_sum",
+      "expected_items": [
+        "可樂",
+        "咖啡",
+        "啤酒",
+        "泡麵",
+        "洋芋片",
+        "餅乾"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [
+        {
+          "name": "revenue",
+          "value": 57443,
+          "of": [
+            "可樂",
+            "咖啡",
+            "啤酒",
+            "泡麵",
+            "洋芋片",
+            "餅乾"
+          ]
+        }
+      ],
+      "expected_views": [
+        {
+          "days": 30,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "communities",
+          "args": {
+            "days": 30,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q08-vip",
+      "template": 8,
+      "kind": "factual",
+      "split": "dev",
+      "input": "重要價值客戶中，哪個群組的營收最高？它包含哪些產品類別？",
+      "filters": {
+        "days": null,
+        "segment": "重要價值客戶"
+      },
+      "fills": {},
+      "catches": "wrong_group_sum",
+      "expected_items": [
+        "可樂",
+        "咖啡",
+        "啤酒",
+        "泡麵",
+        "洋芋片",
+        "餅乾"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [
+        {
+          "name": "revenue",
+          "value": 60160,
+          "of": [
+            "可樂",
+            "咖啡",
+            "啤酒",
+            "泡麵",
+            "洋芋片",
+            "餅乾"
+          ]
+        }
+      ],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": "重要價值客戶"
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "communities",
+          "args": {
+            "days": null,
+            "segment": "重要價值客戶"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q08-new",
+      "template": 8,
+      "kind": "factual",
+      "split": "dev",
+      "input": "新客戶中，哪個群組的營收最高？它包含哪些產品類別？",
+      "filters": {
+        "days": null,
+        "segment": "新客戶"
+      },
+      "fills": {},
+      "catches": "wrong_group_sum",
+      "expected_items": [
+        "優格",
+        "吐司",
+        "咖啡",
+        "雞蛋",
+        "鮮乳"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [
+        {
+          "name": "revenue",
+          "value": 59476,
+          "of": [
+            "優格",
+            "吐司",
+            "咖啡",
+            "雞蛋",
+            "鮮乳"
+          ]
+        }
+      ],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": "新客戶"
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "communities",
+          "args": {
+            "days": null,
+            "segment": "新客戶"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q08-switch-segment",
+      "template": 8,
+      "kind": "factual",
+      "split": "dev",
+      "input": "沉睡客戶中，哪個群組的營收最高？它包含哪些產品類別？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "wrong_group_sum",
+      "expected_items": [
+        "可樂",
+        "咖啡",
+        "啤酒",
+        "泡麵",
+        "洋芋片",
+        "餅乾"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [
+        {
+          "name": "revenue",
+          "value": 45584,
+          "of": [
+            "可樂",
+            "咖啡",
+            "啤酒",
+            "泡麵",
+            "洋芋片",
+            "餅乾"
+          ]
+        }
+      ],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": "沉睡客戶"
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "communities",
+          "args": {
+            "days": null,
+            "segment": "沉睡客戶"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q08-switch-days",
+      "template": 8,
+      "kind": "factual",
+      "split": "dev",
+      "input": "最近 30 天，哪個群組的營收最高？它包含哪些產品類別？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "wrong_group_sum",
+      "expected_items": [
+        "可樂",
+        "咖啡",
+        "啤酒",
+        "泡麵",
+        "洋芋片",
+        "餅乾"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [
+        {
+          "name": "revenue",
+          "value": 57443,
+          "of": [
+            "可樂",
+            "咖啡",
+            "啤酒",
+            "泡麵",
+            "洋芋片",
+            "餅乾"
+          ]
+        }
+      ],
+      "expected_views": [
+        {
+          "days": 30,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "communities",
+          "args": {
+            "days": 30,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q09-milk-tissue",
+      "template": 9,
+      "kind": "factual",
+      "split": "dev",
+      "input": "鮮乳和衛生紙一起購買的頻率，是否高於隨機預期？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {
+        "a": "鮮乳",
+        "b": "衛生紙"
+      },
+      "catches": "popular_is_not_paired",
+      "expected_items": [],
+      "expected_pairs": [
+        [
+          "衛生紙",
+          "鮮乳"
+        ]
+      ],
+      "expected_text": [],
+      "expected_figures": [
+        {
+          "name": "lift",
+          "value": 0.524,
+          "of": [
+            "衛生紙",
+            "鮮乳"
+          ]
+        }
+      ],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "pair_stats",
+          "args": {
+            "a": "鮮乳",
+            "b": "衛生紙",
+            "days": null,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q09-detergent-shampoo",
+      "template": 9,
+      "kind": "factual",
+      "split": "dev",
+      "input": "洗衣精和洗髮精一起購買的頻率，是否高於隨機預期？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {
+        "a": "洗衣精",
+        "b": "洗髮精"
+      },
+      "catches": "popular_is_not_paired",
+      "expected_items": [],
+      "expected_pairs": [
+        [
+          "洗衣精",
+          "洗髮精"
+        ]
+      ],
+      "expected_text": [],
+      "expected_figures": [
+        {
+          "name": "lift",
+          "value": 5.204,
+          "of": [
+            "洗衣精",
+            "洗髮精"
+          ]
+        }
+      ],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "pair_stats",
+          "args": {
+            "a": "洗衣精",
+            "b": "洗髮精",
+            "days": null,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q09-new-cola-chips",
+      "template": 9,
+      "kind": "factual",
+      "split": "dev",
+      "input": "新客戶中，可樂和洋芋片一起購買的頻率，是否高於隨機預期？",
+      "filters": {
+        "days": null,
+        "segment": "新客戶"
+      },
+      "fills": {
+        "a": "可樂",
+        "b": "洋芋片"
+      },
+      "catches": "popular_is_not_paired",
+      "expected_items": [],
+      "expected_pairs": [
+        [
+          "可樂",
+          "洋芋片"
+        ]
+      ],
+      "expected_text": [],
+      "expected_figures": [
+        {
+          "name": "lift",
+          "value": 2.436,
+          "of": [
+            "可樂",
+            "洋芋片"
+          ]
+        }
+      ],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": "新客戶"
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "pair_stats",
+          "args": {
+            "a": "可樂",
+            "b": "洋芋片",
+            "days": null,
+            "segment": "新客戶"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q09-90d-milk-tissue",
+      "template": 9,
+      "kind": "factual",
+      "split": "dev",
+      "input": "最近 90 天，鮮乳和衛生紙一起購買的頻率，是否高於隨機預期？",
+      "filters": {
+        "days": 90,
+        "segment": null
+      },
+      "fills": {
+        "a": "鮮乳",
+        "b": "衛生紙"
+      },
+      "catches": "popular_is_not_paired",
+      "expected_items": [],
+      "expected_pairs": [
+        [
+          "衛生紙",
+          "鮮乳"
+        ]
+      ],
+      "expected_text": [],
+      "expected_figures": [
+        {
+          "name": "lift",
+          "value": 0.544,
+          "of": [
+            "衛生紙",
+            "鮮乳"
+          ]
+        }
+      ],
+      "expected_views": [
+        {
+          "days": 90,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "pair_stats",
+          "args": {
+            "a": "鮮乳",
+            "b": "衛生紙",
+            "days": 90,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q09-trap",
+      "template": 9,
+      "kind": "trap",
+      "split": "dev",
+      "input": "鮮乳和嬰兒奶粉一起購買的頻率，是否高於隨機預期？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "popular_is_not_paired",
+      "expected_items": [],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "trap": "missing",
+      "missing": "嬰兒奶粉",
+      "expected_tools": [
+        {
+          "name": "find_item",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "id": "q09-hidden",
+      "template": 9,
+      "kind": "trap",
+      "split": "dev",
+      "input": "紅酒和起司一起購買的頻率，是否高於隨機預期？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "popular_is_not_paired",
+      "expected_items": [],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "trap": "hidden",
+      "hidden": {
+        "a": "紅酒",
+        "b": "起司"
+      }
+    },
+    {
+      "id": "q11-all-milk",
+      "template": 11,
+      "kind": "factual",
+      "split": "dev",
+      "input": "鮮乳這個類別中，哪個商品最暢銷？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {
+        "item": "鮮乳"
+      },
+      "catches": "product_not_in_brief",
+      "expected_items": [],
+      "expected_pairs": [],
+      "expected_text": [
+        "瑞穗鮮乳 930ml"
+      ],
+      "expected_figures": [
+        {
+          "name": "orders",
+          "value": 203,
+          "of": [
+            "瑞穗鮮乳 930ml"
+          ]
+        }
+      ],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "item_products",
+          "args": {
+            "item": "鮮乳",
+            "days": null,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q11-all-noodles",
+      "template": 11,
+      "kind": "factual",
+      "split": "dev",
+      "input": "泡麵這個類別中，哪個商品最暢銷？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {
+        "item": "泡麵"
+      },
+      "catches": "product_not_in_brief",
+      "expected_items": [],
+      "expected_pairs": [],
+      "expected_text": [
+        "乾拌麵 4入"
+      ],
+      "expected_figures": [
+        {
+          "name": "orders",
+          "value": 62,
+          "of": [
+            "乾拌麵 4入"
+          ]
+        }
+      ],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "item_products",
+          "args": {
+            "item": "泡麵",
+            "days": null,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q11-loyal-tissue",
+      "template": 11,
+      "kind": "factual",
+      "split": "dev",
+      "input": "忠誠客戶在衛生紙這個類別中，最常買哪個商品？",
+      "filters": {
+        "days": null,
+        "segment": "忠誠客戶"
+      },
+      "fills": {
+        "item": "衛生紙"
+      },
+      "catches": "product_not_in_brief",
+      "expected_items": [],
+      "expected_pairs": [],
+      "expected_text": [
+        "抽取式衛生紙 24包"
+      ],
+      "expected_figures": [
+        {
+          "name": "orders",
+          "value": 35,
+          "of": [
+            "抽取式衛生紙 24包"
+          ]
+        }
+      ],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": "忠誠客戶"
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "item_products",
+          "args": {
+            "item": "衛生紙",
+            "days": null,
+            "segment": "忠誠客戶"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q11-new-milk",
+      "template": 11,
+      "kind": "factual",
+      "split": "dev",
+      "input": "新客戶在鮮乳這個類別中，最常買哪個商品？",
+      "filters": {
+        "days": null,
+        "segment": "新客戶"
+      },
+      "fills": {
+        "item": "鮮乳"
+      },
+      "catches": "product_not_in_brief",
+      "expected_items": [],
+      "expected_pairs": [],
+      "expected_text": [
+        "瑞穗鮮乳 930ml"
+      ],
+      "expected_figures": [
+        {
+          "name": "orders",
+          "value": 63,
+          "of": [
+            "瑞穗鮮乳 930ml"
+          ]
+        }
+      ],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": "新客戶"
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "item_products",
+          "args": {
+            "item": "鮮乳",
+            "days": null,
+            "segment": "新客戶"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q11-trap",
+      "template": 11,
+      "kind": "trap",
+      "split": "dev",
+      "input": "寵物食品這個類別中，哪個商品最暢銷？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "product_not_in_brief",
+      "expected_items": [],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "trap": "missing",
+      "missing": "寵物食品",
+      "expected_tools": [
+        {
+          "name": "find_item",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "id": "q11-switch",
+      "template": 11,
+      "kind": "factual",
+      "split": "dev",
+      "input": "忠誠客戶在鮮乳這個類別中，最常買哪個商品？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {
+        "item": "鮮乳"
+      },
+      "catches": "product_not_in_brief",
+      "expected_items": [],
+      "expected_pairs": [],
+      "expected_text": [
+        "瑞穗鮮乳 930ml"
+      ],
+      "expected_figures": [
+        {
+          "name": "orders",
+          "value": 41,
+          "of": [
+            "瑞穗鮮乳 930ml"
+          ]
+        }
+      ],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": "忠誠客戶"
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "item_products",
+          "args": {
+            "item": "鮮乳",
+            "days": null,
+            "segment": "忠誠客戶"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q12-all-coffee",
+      "template": 12,
+      "kind": "factual",
+      "split": "dev",
+      "input": "咖啡和哪些產品類別屬於同一個群組？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {
+        "item": "咖啡"
+      },
+      "catches": "made_up_group",
+      "expected_items": [
+        "可樂",
+        "啤酒",
+        "泡麵",
+        "洋芋片",
+        "餅乾"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "communities",
+          "args": {
+            "days": null,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q12-all-detergent",
+      "template": 12,
+      "kind": "factual",
+      "split": "dev",
+      "input": "洗衣精和哪些產品類別屬於同一個群組？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {
+        "item": "洗衣精"
+      },
+      "catches": "made_up_group",
+      "expected_items": [
+        "洗髮精",
+        "衛生紙"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "communities",
+          "args": {
+            "days": null,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q12-vip-coffee",
+      "template": 12,
+      "kind": "factual",
+      "split": "dev",
+      "input": "重要價值客戶中，咖啡和哪些產品類別屬於同一個群組？",
+      "filters": {
+        "days": null,
+        "segment": "重要價值客戶"
+      },
+      "fills": {
+        "item": "咖啡"
+      },
+      "catches": "made_up_group",
+      "expected_items": [
+        "可樂",
+        "啤酒",
+        "泡麵",
+        "洋芋片",
+        "餅乾"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": "重要價值客戶"
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "communities",
+          "args": {
+            "days": null,
+            "segment": "重要價值客戶"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q12-30d-noodles",
+      "template": 12,
+      "kind": "factual",
+      "split": "dev",
+      "input": "最近 30 天，泡麵和哪些產品類別屬於同一個群組？",
+      "filters": {
+        "days": 30,
+        "segment": null
+      },
+      "fills": {
+        "item": "泡麵"
+      },
+      "catches": "made_up_group",
+      "expected_items": [
+        "可樂",
+        "咖啡",
+        "啤酒",
+        "洋芋片",
+        "餅乾"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": 30,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "communities",
+          "args": {
+            "days": 30,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q12-trap",
+      "template": 12,
+      "kind": "trap",
+      "split": "dev",
+      "input": "冷凍水餃和哪些產品類別屬於同一個群組？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "made_up_group",
+      "expected_items": [],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "trap": "missing",
+      "missing": "冷凍水餃",
+      "expected_tools": [
+        {
+          "name": "find_item",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "id": "q12-switch",
+      "template": 12,
+      "kind": "factual",
+      "split": "dev",
+      "input": "重要價值客戶中，咖啡和哪些產品類別屬於同一個群組？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {
+        "item": "咖啡"
+      },
+      "catches": "made_up_group",
+      "expected_items": [
+        "可樂",
+        "啤酒",
+        "泡麵",
+        "洋芋片",
+        "餅乾"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": "重要價值客戶"
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "communities",
+          "args": {
+            "days": null,
+            "segment": "重要價值客戶"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q13-90d",
+      "template": 13,
+      "kind": "factual",
+      "split": "dev",
+      "input": "最近 90 天，哪五個產品類別出現在最多購物籃中？",
+      "filters": {
+        "days": 90,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "revenue_as_orders",
+      "expected_items": [
+        "鮮乳",
+        "衛生紙",
+        "可樂",
+        "洋芋片",
+        "咖啡"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": 90,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "top_items",
+          "args": {
+            "by": "orders",
+            "days": 90,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q13-loyal",
+      "template": 13,
+      "kind": "factual",
+      "split": "dev",
+      "input": "忠誠客戶中，哪五個產品類別出現在最多購物籃中？",
+      "filters": {
+        "days": null,
+        "segment": "忠誠客戶"
+      },
+      "fills": {},
+      "catches": "revenue_as_orders",
+      "expected_items": [
+        "鮮乳",
+        "衛生紙",
+        "吐司",
+        "可樂",
+        "洋芋片"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": "忠誠客戶"
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "top_items",
+          "args": {
+            "by": "orders",
+            "days": null,
+            "segment": "忠誠客戶"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q13-vip",
+      "template": 13,
+      "kind": "factual",
+      "split": "dev",
+      "input": "重要價值客戶中，哪五個產品類別的訂單數最多？",
+      "filters": {
+        "days": null,
+        "segment": "重要價值客戶"
+      },
+      "fills": {},
+      "catches": "revenue_as_orders",
+      "expected_items": [
+        "鮮乳",
+        "衛生紙",
+        "可樂",
+        "洋芋片",
+        "咖啡"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": "重要價值客戶"
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "top_items",
+          "args": {
+            "by": "orders",
+            "days": null,
+            "segment": "重要價值客戶"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q13-new",
+      "template": 13,
+      "kind": "factual",
+      "split": "dev",
+      "input": "新客戶中，哪五個產品類別的訂單數最多？",
+      "filters": {
+        "days": null,
+        "segment": "新客戶"
+      },
+      "fills": {},
+      "catches": "revenue_as_orders",
+      "expected_items": [
+        "鮮乳",
+        "衛生紙",
+        "可樂",
+        "洋芋片",
+        "咖啡"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": "新客戶"
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "top_items",
+          "args": {
+            "by": "orders",
+            "days": null,
+            "segment": "新客戶"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q13-trap",
+      "template": 13,
+      "kind": "trap",
+      "split": "dev",
+      "input": "保健食品出現在多少個購物籃中？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "revenue_as_orders",
+      "expected_items": [],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "trap": "missing",
+      "missing": "保健食品",
+      "expected_tools": [
+        {
+          "name": "find_item",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "id": "q13-switch",
+      "template": 13,
+      "kind": "factual",
+      "split": "dev",
+      "input": "沉睡客戶中，哪五個產品類別的訂單數最多？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "revenue_as_orders",
+      "expected_items": [
+        "鮮乳",
+        "衛生紙",
+        "洋芋片",
+        "吐司",
+        "可樂"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": "沉睡客戶"
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "top_items",
+          "args": {
+            "by": "orders",
+            "days": null,
+            "segment": "沉睡客戶"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q14-coffee-loyal-new",
+      "template": 14,
+      "kind": "factual",
+      "split": "dev",
+      "input": "比較忠誠客戶和新客戶：買咖啡時最常一起買的產品類別有什麼不同？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {
+        "item": "咖啡"
+      },
+      "catches": "one_scope_for_both",
+      "expected_items": [
+        "吐司",
+        "鮮乳"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": "忠誠客戶"
+        },
+        {
+          "days": null,
+          "segment": "新客戶"
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "item_neighbors",
+          "args": {
+            "by": "co_orders",
+            "item": "咖啡",
+            "days": null,
+            "segment": "忠誠客戶"
+          }
+        },
+        {
+          "name": "item_neighbors",
+          "args": {
+            "by": "co_orders",
+            "item": "咖啡",
+            "days": null,
+            "segment": "新客戶"
+          }
+        }
+      ]
+    },
+    {
+      "id": "q14-coffee-loyal-all",
+      "template": 14,
+      "kind": "factual",
+      "split": "dev",
+      "input": "忠誠客戶買咖啡時最常搭配的產品類別，和全體客戶相比有什麼不同？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {
+        "item": "咖啡"
+      },
+      "catches": "one_scope_for_both",
+      "expected_items": [
+        "吐司",
+        "鮮乳"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": "忠誠客戶"
+        },
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "item_neighbors",
+          "args": {
+            "by": "co_orders",
+            "item": "咖啡",
+            "days": null,
+            "segment": "忠誠客戶"
+          }
+        },
+        {
+          "name": "item_neighbors",
+          "args": {
+            "by": "co_orders",
+            "item": "咖啡",
+            "days": null,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q14-milk-30d-all",
+      "template": 14,
+      "kind": "factual",
+      "split": "dev",
+      "input": "比較最近 30 天和全部期間：買鮮乳時最常一起買的產品類別有什麼不同？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {
+        "item": "鮮乳"
+      },
+      "catches": "one_scope_for_both",
+      "expected_items": [
+        "優格",
+        "吐司"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": 30,
+          "segment": null
+        },
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "item_neighbors",
+          "args": {
+            "by": "co_orders",
+            "item": "鮮乳",
+            "days": 30,
+            "segment": null
+          }
+        },
+        {
+          "name": "item_neighbors",
+          "args": {
+            "by": "co_orders",
+            "item": "鮮乳",
+            "days": null,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q14-coffee-loyal-90d",
+      "template": 14,
+      "kind": "factual",
+      "split": "dev",
+      "input": "比較忠誠客戶和最近 90 天的全體客戶：買咖啡時最常一起買的產品類別有什麼不同？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {
+        "item": "咖啡"
+      },
+      "catches": "one_scope_for_both",
+      "expected_items": [
+        "吐司",
+        "鮮乳"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": "忠誠客戶"
+        },
+        {
+          "days": 90,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "item_neighbors",
+          "args": {
+            "by": "co_orders",
+            "item": "咖啡",
+            "days": null,
+            "segment": "忠誠客戶"
+          }
+        },
+        {
+          "name": "item_neighbors",
+          "args": {
+            "by": "co_orders",
+            "item": "咖啡",
+            "days": 90,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q14-trap",
+      "template": 14,
+      "kind": "trap",
+      "split": "dev",
+      "input": "比較忠誠客戶和新客戶：買貓砂時最常一起買的產品類別有什麼不同？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "one_scope_for_both",
+      "expected_items": [],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "trap": "missing",
+      "missing": "貓砂",
+      "expected_tools": [
+        {
+          "name": "find_item",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "id": "q14-no-segment",
+      "template": 14,
+      "kind": "trap",
+      "split": "dev",
+      "input": "比較白金會員和新客戶：買咖啡時最常一起買的產品類別有什麼不同？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "one_scope_for_both",
+      "expected_items": [],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "trap": "no_segment",
+      "no_segment": "白金會員"
+    },
+    {
+      "id": "q04-product-name",
+      "template": 4,
+      "kind": "factual",
+      "split": "dev",
+      "input": "買乾拌麵的人，最常一起買哪個產品類別？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {
+        "item": "泡麵"
+      },
+      "catches": "wrong_partner",
+      "expected_items": [
+        "洋芋片"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "find_item",
+          "args": {}
+        },
+        {
+          "name": "item_neighbors",
+          "args": {
+            "by": "co_orders",
+            "item": "泡麵",
+            "days": null,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q04-near-miss",
+      "template": 4,
+      "kind": "factual",
+      "split": "dev",
+      "input": "買洗髮乳時，最常一起買哪個產品類別？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {
+        "item": "洗髮精"
+      },
+      "catches": "wrong_partner",
+      "expected_items": [
+        "衛生紙"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "find_item",
+          "args": {}
+        },
+        {
+          "name": "item_neighbors",
+          "args": {
+            "by": "co_orders",
+            "item": "洗髮精",
+            "days": null,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q04-other-word",
+      "template": 4,
+      "kind": "factual",
+      "split": "dev",
+      "input": "買牛奶時，最常一起買哪個產品類別？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {
+        "item": "鮮乳"
+      },
+      "catches": "wrong_partner",
+      "expected_items": [
+        "吐司"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "find_item",
+          "args": {}
+        },
+        {
+          "name": "item_neighbors",
+          "args": {
+            "by": "co_orders",
+            "item": "鮮乳",
+            "days": null,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q15-all",
+      "template": 15,
+      "kind": "factual",
+      "split": "dev",
+      "input": "哪三個產品類別最常被一起購買？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "pair_logic_for_a_set",
+      "expected_items": [
+        "優格",
+        "吐司",
+        "鮮乳"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [
+        {
+          "name": "co_orders",
+          "value": 85,
+          "of": [
+            "優格",
+            "吐司",
+            "鮮乳"
+          ]
+        }
+      ],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "top_bundles",
+          "args": {
+            "by": "co_orders",
+            "days": null,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q15-90d",
+      "template": 15,
+      "kind": "factual",
+      "split": "dev",
+      "input": "最近 90 天，哪三個產品類別最常被一起購買？",
+      "filters": {
+        "days": 90,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "pair_logic_for_a_set",
+      "expected_items": [
+        "優格",
+        "吐司",
+        "鮮乳"
+      ],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [
+        {
+          "name": "co_orders",
+          "value": 65,
+          "of": [
+            "優格",
+            "吐司",
+            "鮮乳"
+          ]
+        }
+      ],
+      "expected_views": [
+        {
+          "days": 90,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "top_bundles",
+          "args": {
+            "by": "co_orders",
+            "days": 90,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q15-trap",
+      "template": 15,
+      "kind": "trap",
+      "split": "dev",
+      "input": "包含寵物食品的三個產品類別組合中，哪一組最常被一起購買？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "pair_logic_for_a_set",
+      "expected_items": [],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "trap": "missing",
+      "missing": "寵物食品",
+      "expected_tools": [
+        {
+          "name": "find_item",
+          "args": {}
+        }
+      ]
+    },
+    {
+      "id": "q16-loyal-new",
+      "template": 16,
+      "kind": "open",
+      "split": "dev",
+      "input": "忠誠客戶和新客戶買東西的組合有什麼不同？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "one_lookup_per_side",
+      "expected_items": [],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": "忠誠客戶"
+        },
+        {
+          "days": null,
+          "segment": "新客戶"
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "compare",
+          "args": {
+            "a": {
+              "days": null,
+              "segment": "忠誠客戶"
+            },
+            "b": {
+              "days": null,
+              "segment": "新客戶"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "q16-30d-all",
+      "template": 16,
+      "kind": "open",
+      "split": "dev",
+      "input": "最近 30 天和全部期間相比，大家一起買的東西有什麼變化？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "one_lookup_per_side",
+      "expected_items": [],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": 30,
+          "segment": null
+        },
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "compare",
+          "args": {
+            "a": {
+              "days": 30,
+              "segment": null
+            },
+            "b": {
+              "days": null,
+              "segment": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "q16-vip-all",
+      "template": 16,
+      "kind": "open",
+      "split": "dev",
+      "input": "重要價值客戶的購買組合，和全體客戶有什麼不一樣？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "one_lookup_per_side",
+      "expected_items": [],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": "重要價值客戶"
+        },
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "compare",
+          "args": {
+            "a": {
+              "days": null,
+              "segment": "重要價值客戶"
+            },
+            "b": {
+              "days": null,
+              "segment": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "q17-all",
+      "template": 17,
+      "kind": "open",
+      "split": "dev",
+      "input": "哪些產品類別各自都常和同樣的類別一起買，彼此卻還不常一起買？它們有成長潛力嗎？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "proven_pair_as_potential",
+      "expected_items": [],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "potential_pairs",
+          "args": {
+            "method": "shared_partners",
+            "days": null,
+            "segment": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "q18-all",
+      "template": 18,
+      "kind": "open",
+      "split": "dev",
+      "input": "有沒有哪個客群特別常一起買、全體客戶卻不常一起買的產品類別組合？",
+      "filters": {
+        "days": null,
+        "segment": null
+      },
+      "fills": {},
+      "catches": "proven_pair_as_potential",
+      "expected_items": [],
+      "expected_pairs": [],
+      "expected_text": [],
+      "expected_figures": [],
+      "expected_views": [
+        {
+          "days": null,
+          "segment": null
+        }
+      ],
+      "expected_tools": [
+        {
+          "name": "potential_pairs",
+          "args": {
+            "method": "segment_gap",
+            "days": null,
+            "segment": null
+          }
+        }
+      ]
+    }
+  ]
+}

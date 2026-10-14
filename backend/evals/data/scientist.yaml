@@ -1,0 +1,90 @@
+# The scientist's cases: a question, and the chart its answer calls for.
+#
+# The scientist is scored on its own, so what it is given is fixed: `evals/build_scientist.py`
+# runs the analyst on each case once and freezes its reply and its tool results into
+# scientist.json. Each case is one the app would send to the scientist: an answer that passed
+# review, states a figure, and is about one scope.
+#
+#   filters  the graph's filters when the question is asked (none: all the data, all customers)
+#   chart    whether the answer calls for a chart at all. One number or a yes or no does not
+#   types    the chart types that fit. Often more than one does
+#   values   the fields that measure what the question asks about
+#   label    the field that should name each row, where only one fits
+#   tools    the tool whose result should be drawn: the one that answers the question
+
+- id: top-revenue
+  input: "營收最高的前五個產品類別是哪些？"
+  chart: true
+  types: [bar]
+  values: [revenue]
+  tools: [top_items]
+
+- id: top-orders-90d
+  input: "最近 90 天，哪五個產品類別出現在最多購物籃中？"
+  filters: {days: 90}
+  chart: true
+  types: [bar]
+  values: [orders]
+  tools: [top_items]
+
+# The answer's own result is one row, so the scientist has to ask for a wider one.
+- id: top-pair
+  input: "哪兩個產品類別最常被一起購買？"
+  chart: true
+  types: [bar, heatmap]
+  values: [coOrders]
+  label: pair
+  tools: [top_pairs]
+
+- id: top-lift-loyal
+  input: "忠誠客戶中，哪兩個產品類別的提升度最高？"
+  filters: {segment: 忠誠客戶}
+  chart: true
+  types: [bar, heatmap]
+  values: [lift]
+  label: pair
+  tools: [top_pairs]
+
+- id: partners-coffee
+  input: "買咖啡時，最常一起買哪個產品類別？"
+  chart: true
+  types: [bar]
+  values: [coOrders]
+  label: item
+  tools: [item_neighbors]
+
+- id: bridge
+  input: "哪個產品類別連結了最多其他產品類別？"
+  chart: true
+  types: [bar]
+  values: [betweenness, links]
+  tools: [central_items]
+
+# The parts of a whole: the one place a pie fits.
+- id: top-group
+  input: "哪個群組的營收最高？它包含哪些產品類別？"
+  chart: true
+  types: [pie, bar]
+  values: [revenue]
+  label: group
+  tools: [communities]
+
+# The title follows the question's language.
+- id: top-revenue-english
+  input: "What are the top 5 product types by revenue?"
+  chart: true
+  types: [bar]
+  values: [revenue]
+  tools: [top_items]
+
+- id: yes-no-milk-tissue
+  input: "鮮乳和衛生紙一起購買的頻率，是否高於隨機預期？"
+  chart: false
+
+- id: yes-no-detergent-shampoo
+  input: "洗衣精和洗髮精一起購買的頻率，是否高於隨機預期？"
+  chart: false
+
+- id: one-figure
+  input: "咖啡的營收是多少？"
+  chart: false
