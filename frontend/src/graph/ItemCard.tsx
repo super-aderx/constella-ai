@@ -8,10 +8,13 @@ interface ItemCardProps {
   name: string
   onSelect: (item: string | null) => void
   onAsk: (question: string) => void
+  /** Whether the user has set this type aside: the assistant builds no campaign on it. */
+  ignored: boolean
+  onIgnore: () => void
 }
 
-/** The selected product type: its figures, its top products, its strongest partners, and a way to ask about it. */
-export function ItemCard({ network, name, onSelect, onAsk }: ItemCardProps) {
+/** The selected product type: its figures, its top products, its strongest partners, a way to ask about it, and a way to keep it out of campaigns. */
+export function ItemCard({ network, name, onSelect, onAsk, ignored, onIgnore }: ItemCardProps) {
   const item = network.items.find((i) => i.name === name)!
   const partners = partnersOf(network.pairs, name).slice(0, 4)
   return (
@@ -58,6 +61,10 @@ export function ItemCard({ network, name, onSelect, onAsk }: ItemCardProps) {
 
       <button type="button" onClick={() => onAsk(`What sells with ${item.name}?`)} className="h-9 cursor-pointer rounded-lg bg-action font-semibold text-on-action">
         Ask about it
+      </button>
+      {/* The graph keeps the type either way: this only tells the assistant not to build a campaign on it. */}
+      <button type="button" aria-pressed={ignored} onClick={onIgnore} className="-mt-1 cursor-pointer text-[12px] font-medium text-ink-muted hover:text-ink">
+        {ignored ? "Left out of campaigns · Undo" : "Leave out of campaigns"}
       </button>
     </aside>
   )

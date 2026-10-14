@@ -2,12 +2,14 @@
 
 import asyncio
 import os
+from collections.abc import Sequence
 
 from agents import Agent, ModelSettings, Runner
 from openai.types.shared import Reasoning
 from pydantic import BaseModel
 
-from app.data import load_network
+from app.infra.data import load_network
+from app.roles.analyst import Pair
 
 RULES = """\
 You are Constella AI, an analyst for one store's network of product types: which types sell, and
@@ -25,11 +27,6 @@ Answer from the data brief below and nothing else.
 In `items` list every product type your answer names, and in `pairs` every pair it names.
 The graph highlights them.
 """
-
-
-class Pair(BaseModel):
-    a: str
-    b: str
 
 
 class Answer(BaseModel):
@@ -65,13 +62,18 @@ def brief(network: dict, days: int | None, segment: str | None) -> str:
     )
 
 
-async def ask(question: str, days: int | None, segment: str | None) -> Answer:
+async def ask(
+    question: str, days: int | None, segment: str | None, ignored: Sequence[str] = ()
+) -> Answer:
     # load_network reads the database synchronously: in a worker thread, so a filter it has not
     # seen yet does not hold up every other request.
     network = await asyncio.to_thread(load_network, days, segment)
+    rules = RULES
+    if ignored:
+        rules += f"- Never recommend these product types: {', '.join(ignored)}. Facts are fine.\n"
     agent = Agent(
         name="Constella AI v1",
-        instructions=f"{RULES}\n{brief(network, days, segment)}",
+        instructions=f"{rules}\n{brief(network, days, segment)}",
         model=os.environ.get("OPENAI_MODEL"),  # unset: the SDK's default model
         model_settings=ModelSettings(reasoning=Reasoning(effort="low")),
         output_type=Answer,

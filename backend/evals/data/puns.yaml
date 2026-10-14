@@ -1,0 +1,39 @@
+# Pun slogans the writer has drafted (see evals/writer-puns.md), each with a verdict given by
+# hand. evals/roles/test_writer.py runs the judge on them before its scores are trusted.
+#   campaign  a key of CAMPAIGNS in evals/roles/test_writer.py
+#   verdict   good: a pun to put on a shelf tag. bad: not one. borderline: could go either way,
+#             so the judge may score it as it likes.
+
+# gpt-4o-2024-08-06
+- {model: gpt-4o, campaign: breakfast, verdict: bad, slogan: "享受美味，不要先入為主。", pun: "鮮乳 ≈ 先入"}
+- {model: gpt-4o, campaign: drinks, verdict: bad, slogan: "下班時刻，必救你的小酌心情。", pun: "啤酒 ≈ 必救"}
+- {model: gpt-4o, campaign: breakfast, verdict: bad, slogan: "奶一奶二，早餐不拒 ≈ 奶酪＿拒！Planets =- basis", pun: "奶 ≈ 萎"}
+- {model: gpt-4o, campaign: breakfast, verdict: bad, slogan: "鮮乳吐司，早餐先享再省", pun: "鮮乳 ≈ 先入, from 先入為主"}
+- {model: gpt-4o, campaign: drinks, verdict: bad, slogan: "啤久洋芋片，酌時享受", pun: "啤久 ≈ 啤酒, from 久留"}
+- {model: gpt-4o, campaign: breakfast, verdict: bad, slogan: "牛奶新鮮喝，八折就發者", pun: "發者 ≈ 八折"}
+- {model: gpt-4o, campaign: drinks, verdict: bad, slogan: "啤久一下，85折開懷", pun: "啤久 ≈ 啤酒"}
+- {model: gpt-4o, campaign: drinks, verdict: borderline, slogan: "讓我們下班一起啤安心", pun: "啤安心≈平安心，從平安心享小酌"}
+- {model: gpt-4o, campaign: breakfast, verdict: borderline, slogan: "早安，早餐8折起", pun: "早餐 ≈ 早安"}
+- {model: gpt-4o, campaign: drinks, verdict: bad, slogan: "工作必要下班小酌", pun: "必要 ≈ 啤酒"}
+
+# gpt-5.6-luna, the first prompt (a pun, the occasion, the plain offer)
+- {model: gpt-5.6-luna, campaign: breakfast, verdict: good, slogan: "鮮乳吐司組合，鮮乳為主，8折", pun: "鮮乳 ≈ 先入，取自先入為主"}
+- {model: gpt-5.6-luna, campaign: breakfast, verdict: good, slogan: "鮮乳為主，吐司相伴，組合8折", pun: "鮮乳 ≈ 先入，取自先入為主"}
+- {model: gpt-5.6-luna, campaign: breakfast, verdict: good, slogan: "鮮乳為主，早餐組合8折", pun: "鮮乳 ≈ 先入，取自先入為主"}
+- {model: gpt-5.6-luna, campaign: breakfast, verdict: good, slogan: "鮮乳為主，吐司早餐組合8折", pun: "鮮乳 ≈ 先入，取自先入為主"}
+- {model: gpt-5.6-luna, campaign: breakfast, verdict: bad, slogan: "鮮乳吐司先入為主，早餐組合8折", pun: "鮮乳 ≈ 先入"}
+- {model: gpt-5.6-luna, campaign: breakfast, verdict: bad, slogan: "鮮乳吐司為主，早餐組合8折", pun: "鮮乳 ≈ 先入，取自先入為主"}
+- {model: gpt-5.6-luna, campaign: drinks, verdict: good, slogan: "啤酒配洋芋片，天長地酒85折", pun: "酒 ≈ 久，取自天長地久"}
+- {model: gpt-5.6-luna, campaign: drinks, verdict: borderline, slogan: "啤酒作陪，洋芋片相隨，組合85折", pun: "啤酒 ≈ 陪酒"}
+- {model: gpt-5.6-luna, campaign: drinks, verdict: borderline, slogan: "啤酒相陪，洋芋片相配，85折", pun: "啤酒 ≈ 陪酒，取自陪酒作伴"}
+
+# gpt-5.6-luna, the current prompt (a pun, cheeky, a moment)
+# First called good by hand. The judge failed it: 疲 is written out and 啤 is not swapped into a
+# known phrase. That is a fair point, so it is left for a native reader to settle.
+- {model: gpt-5.6-luna, campaign: drinks, verdict: borderline, slogan: "疲了就啤，洋芋片配到位", pun: "啤≈疲（從疲了就…）"}
+- {model: gpt-5.6-luna, campaign: drinks, verdict: bad, slogan: "啤酒一開，疲憊掰掰", pun: "啤 ≈ 疲，取「疲憊」的諧音"}
+- {model: gpt-5.6-luna, campaign: drinks, verdict: borderline, slogan: "啤酒陪你，今晚不必陪笑", pun: "啤酒 ≈ 陪酒"}
+- {model: gpt-5.6-luna, campaign: breakfast, verdict: bad, slogan: "鮮乳吐司，先吃再說", pun: "鮮 ≈ 先（先吃再說）"}
+- {model: gpt-5.6-luna, campaign: breakfast, verdict: bad, slogan: "鮮乳先入，早餐好入手", pun: "鮮乳 ≈ 先入（先入為主）"}
+- {model: gpt-5.6-luna, campaign: pork, verdict: good, slogan: "豬事順利，菜也到位", pun: "豬 ≈ 諸：豬事順利"}
+- {model: gpt-5.6-luna, campaign: tofu, verdict: bad, slogan: "買菜買豆，財到手", pun: "菜 ≈ 財：買菜買豆，財到手"}

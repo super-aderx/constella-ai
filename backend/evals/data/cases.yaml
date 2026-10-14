@@ -1,0 +1,289 @@
+# The golden set: 15 templates, 77 cases.
+#
+# The agent answers about the network the graph draws, so the ground truth follows the graph's
+# rules too: the case's filters are the graph's filters, and a pair counts only if it shares at
+# least the graph's floor of baskets (30 out of all the data, the same share of a filter's own
+# baskets, never fewer than 5). `prelude` builds that network from the raw invoice table. It is
+# written here from the rule, not taken from the app's queries, so a bug there cannot pass its
+# own test. `evals/build.py` runs each case and freezes the answers into golden.json.
+#
+# SQL parameters: %(segment)s and %(days)s are the case's filters (null: no filter), the rest are
+# its fills. What a template's SQL returns decides what is expected:
+#   item        -> expected_items          a, b  -> expected_pairs
+#   text        -> expected_text: words the answer must contain (a product's name)
+#   the columns in `asked` -> expected_figures, one per row
+# `asked` is the figures an answer must state: the measure the question is about. Any other figure
+# is the agent's choice to state, and is checked against its own ledger instead.
+#
+# `filters` is what the graph shows when the question is asked. A question can name another scope:
+#   scope     the question names this segment or period instead; the answer is for it, and the
+#             graph switches to it
+#   compare   the question compares these two scopes; the answer covers both, and the graph splits
+#
+# A trap has one right answer: that it cannot be answered from the graph, with no figures.
+#   missing     the question names a product type that is not in the data. The agent may only
+#               say so after looking the name up, so find_item is expected
+#   hidden      the pair exists but is too rare for the graph (fills a, b)
+#   no_segment  the question names a customer segment that does not exist
+#
+# `find: true` on a case: the question's words are not the data's, so find_item is expected
+# before the template's own tool.
+#
+# `kind: open` is a question with no single right answer: what differs between two scopes, which
+# combinations could grow. There is no ground-truth SQL. The answer must be about the expected
+# scopes, name only what the expected tool returned, and the expected tool must be called.
+
+prelude: |
+  WITH scoped AS (
+    SELECT inv_num, item_tag, item_name, amount FROM invoice
+    WHERE (%(segment)s::TEXT IS NULL OR segment = %(segment)s)
+      AND (%(days)s::INT IS NULL
+        OR datetime >= (SELECT MAX(datetime) FROM invoice) - MAKE_INTERVAL(days => %(days)s))
+  ),
+  lines AS (SELECT DISTINCT inv_num, item_tag FROM scoped),
+  orders AS (SELECT item_tag, COUNT(*) AS n FROM lines GROUP BY 1),
+  baskets AS (SELECT COUNT(DISTINCT inv_num) AS n FROM lines),
+  cutoff AS (
+    SELECT GREATEST(5, ROUND(
+      30.0 * (SELECT n FROM baskets) / (SELECT COUNT(DISTINCT inv_num) FROM invoice)
+    )) AS n
+  ),
+  pairs AS (
+    SELECT x.item_tag AS a, y.item_tag AS b, COUNT(*)::INT AS co_orders,
+           ROUND(COUNT(*) * (SELECT n FROM baskets)::NUMERIC / (MAX(ox.n) * MAX(oy.n)), 3)::FLOAT
+             AS lift
+    FROM lines x
+    JOIN lines y ON x.inv_num = y.inv_num AND x.item_tag < y.item_tag
+    JOIN orders ox ON ox.item_tag = x.item_tag
+    JOIN orders oy ON oy.item_tag = y.item_tag
+    GROUP BY 1, 2
+    HAVING COUNT(*) >= (SELECT n FROM cutoff)
+  )
+
+# What a group's revenue is added up from, for the templates about groups.
+revenue: SELECT item_tag AS item, SUM(amount)::INT AS revenue FROM scoped GROUP BY 1
+
+templates:
+  1:
+    name: top 5 product types by revenue
+    catches: invented_ranking # also: ranking by orders instead of revenue
+    tool: {name: top_items, args: {by: revenue}}
+    sql: |
+      SELECT item_tag AS item, SUM(amount)::INT AS revenue
+      FROM scoped GROUP BY 1 ORDER BY revenue DESC, item LIMIT 5
+
+  2:
+    name: the pair bought together most often
+    catches: best_sellers_as_pair
+    tool: {name: top_pairs, args: {by: co_orders}}
+    sql: SELECT a, b, co_orders FROM pairs ORDER BY co_orders DESC, a, b LIMIT 1
+
+  3:
+    name: the pair with the highest lift
+    catches: wrong_lift_ranking # also: ranking by shared baskets instead of lift
+    tool: {name: top_pairs, args: {by: lift}}
+    asked: [lift]
+    sql: SELECT a, b, co_orders, lift FROM pairs ORDER BY lift DESC, a, b LIMIT 1
+
+  4:
+    name: what is bought most with a product type
+    catches: wrong_partner
+    tool: {name: item_neighbors, args: {by: co_orders}}
+    sql: |
+      SELECT CASE WHEN a = %(item)s THEN b ELSE a END AS item, co_orders
+      FROM pairs WHERE %(item)s IN (a, b)
+      ORDER BY co_orders DESC, item LIMIT 1
+
+  7:
+    name: the product type that connects the most others
+    catches: best_seller_as_hub
+    tool: {name: central_items, args: {by: betweenness}}
+    # The SQL gives the graph's pairs above chance; the build finds the type with the highest
+    # betweenness on them with NetworkX.
+    derive: betweenness
+    sql: SELECT a, b FROM pairs WHERE lift > 1 ORDER BY a, b
+
+  8:
+    name: the group that earns the most
+    catches: wrong_group_sum # also: made-up groups, or the biggest group instead of the richest
+    tool: {name: communities, args: {}}
+    # The SQL gives the graph's pairs above chance, strongest first; the build groups them with
+    # Louvain (seed 42, as the graph does) and adds up each group's revenue.
+    derive: top_group
+    sql: SELECT a, b, lift FROM pairs WHERE lift > 1 ORDER BY lift DESC, a, b
+
+  9:
+    name: are two product types bought together more than chance predicts
+    catches: popular_is_not_paired
+    tool: {name: pair_stats, args: {}}
+    asked: [lift] # the evidence for the yes or no
+    sql: |
+      SELECT a, b, co_orders, lift FROM pairs
+      WHERE a = LEAST(%(a)s::TEXT, %(b)s::TEXT) AND b = GREATEST(%(a)s::TEXT, %(b)s::TEXT)
+
+  11:
+    name: the best-selling product inside a product type
+    catches: product_not_in_brief # also: naming the type instead of a product
+    tool: {name: item_products, args: {}}
+    asked: [orders]
+    sql: |
+      SELECT item_name AS text, COUNT(DISTINCT inv_num)::INT AS orders
+      FROM scoped WHERE item_tag = %(item)s
+      GROUP BY 1 ORDER BY orders DESC, text LIMIT 1
+
+  12:
+    name: which product types share a group with one
+    catches: made_up_group
+    tool: {name: communities, args: {}, fills: false}
+    derive: group_of
+    sql: SELECT a, b, lift FROM pairs WHERE lift > 1 ORDER BY lift DESC, a, b
+
+  14:
+    name: what is bought most with a product type, under two scopes
+    catches: one_scope_for_both # also: mixing the two sides up
+    # Template 4's question asked of each scope: the answer names each side's top partner.
+    # `compare` does not return a type's partners, so the path is template 4's tool, once for
+    # each side.
+    tool: {name: item_neighbors, args: {by: co_orders}}
+    sql: |
+      SELECT CASE WHEN a = %(item)s THEN b ELSE a END AS item, co_orders
+      FROM pairs WHERE %(item)s IN (a, b)
+      ORDER BY co_orders DESC, item LIMIT 1
+
+  15:
+    name: the three product types bought together most often
+    catches: pair_logic_for_a_set # also: a group with three members instead of a set of three
+    tool: {name: top_bundles, args: {by: co_orders}}
+    # A set counts when each two of its three are a pair on the graph, and it is in at least
+    # half the baskets a pair needs (never fewer than 5).
+    derive: bundle
+    sql: |
+      SELECT x.item_tag AS a, y.item_tag AS b, z.item_tag AS c, COUNT(*)::INT AS co_orders
+      FROM lines x
+      JOIN lines y ON x.inv_num = y.inv_num AND x.item_tag < y.item_tag
+      JOIN lines z ON y.inv_num = z.inv_num AND y.item_tag < z.item_tag
+      WHERE (x.item_tag, y.item_tag) IN (SELECT a, b FROM pairs)
+        AND (y.item_tag, z.item_tag) IN (SELECT a, b FROM pairs)
+        AND (x.item_tag, z.item_tag) IN (SELECT a, b FROM pairs)
+      GROUP BY 1, 2, 3
+      HAVING COUNT(*) >= GREATEST(5, FLOOR((SELECT n FROM cutoff) / 2))
+      ORDER BY co_orders DESC, a, b, c LIMIT 2
+
+  16:
+    name: what differs between two scopes
+    catches: one_lookup_per_side # also: describing one side only
+    # An open comparison is what `compare` is for: its two sides are the case's `compare`.
+    tool: {name: compare, args: {}}
+
+  17:
+    name: combinations that could grow, by the partners two types share
+    catches: proven_pair_as_potential # also: a forecast instead of a candidate to test
+    tool: {name: potential_pairs, args: {method: shared_partners}}
+
+  18:
+    name: combinations one segment buys together far more than customers overall
+    catches: proven_pair_as_potential
+    tool: {name: potential_pairs, args: {method: segment_gap}}
+
+  13:
+    name: top 5 product types by orders
+    catches: revenue_as_orders
+    tool: {name: top_items, args: {by: orders}}
+    sql: |
+      SELECT item_tag AS item, COUNT(*)::INT AS orders
+      FROM lines GROUP BY 1 ORDER BY orders DESC, item LIMIT 5
+
+cases:
+  - {id: q01-all, template: 1, input: "營收最高的前五個產品類別是哪些？"}
+  - {id: q01-vip, template: 1, input: "重要價值客戶營收最高的前五個產品類別是哪些？", filters: {segment: 重要價值客戶}}
+  - {id: q01-30d, template: 1, input: "最近 30 天營收最高的前五個產品類別是哪些？", filters: {days: 30}}
+  - {id: q01-new, template: 1, input: "新客戶營收最高的前五個產品類別是哪些？", filters: {segment: 新客戶}}
+  - {id: q01-trap, template: 1, kind: trap, input: "寵物食品的營收在所有產品類別中排第幾？", missing: 寵物食品}
+  - {id: q01-switch, template: 1, input: "最近 30 天營收最高的前五個產品類別是哪些？", scope: {days: 30}}
+
+  - {id: q02-all, template: 2, input: "哪兩個產品類別最常被一起購買？"}
+  - {id: q02-30d, template: 2, input: "最近 30 天，哪兩個產品類別最常被一起購買？", filters: {days: 30}}
+  - {id: q02-loyal, template: 2, input: "忠誠客戶最常一起購買哪兩個產品類別？", filters: {segment: 忠誠客戶}}
+  - {id: q02-90d, template: 2, input: "最近 90 天，哪兩個產品類別最常被一起購買？", filters: {days: 90}}
+  - {id: q02-trap, template: 2, kind: trap, input: "哪個產品類別最常和冷凍水餃一起購買？", missing: 冷凍水餃}
+  - {id: q02-switch, template: 2, input: "最近 30 天，哪兩個產品類別最常被一起購買？", scope: {days: 30}}
+
+  - {id: q03-all, template: 3, input: "哪兩個產品類別的提升度最高？"}
+  - {id: q03-90d, template: 3, input: "最近 90 天，哪兩個產品類別的提升度最高？", filters: {days: 90}}
+  - {id: q03-loyal, template: 3, input: "忠誠客戶中，哪兩個產品類別的提升度最高？", filters: {segment: 忠誠客戶}}
+  - {id: q03-dormant, template: 3, input: "沉睡客戶中，哪兩個產品類別的提升度最高？", filters: {segment: 沉睡客戶}}
+  - {id: q03-trap, template: 3, kind: trap, input: "尿布和哪個產品類別的提升度最高？", missing: 尿布}
+  - {id: q03-switch, template: 3, input: "新客戶中，哪兩個產品類別的提升度最高？", scope: {segment: 新客戶}}
+
+  - {id: q04-all-coffee, template: 4, input: "買咖啡時，最常一起買哪個產品類別？", fills: {item: 咖啡}}
+  - {id: q04-loyal-coffee, template: 4, input: "忠誠客戶買咖啡時，最常一起買哪個產品類別？", filters: {segment: 忠誠客戶}, fills: {item: 咖啡}}
+  - {id: q04-all-beer, template: 4, input: "買啤酒時，最常一起買哪個產品類別？", fills: {item: 啤酒}}
+  - {id: q04-30d-milk, template: 4, input: "最近 30 天，買鮮乳時最常一起買哪個產品類別？", filters: {days: 30}, fills: {item: 鮮乳}}
+  - {id: q04-trap, template: 4, kind: trap, input: "忠誠客戶買貓砂時，最常一起買哪個產品類別？", filters: {segment: 忠誠客戶}, missing: 貓砂}
+  # The same question as q04-loyal-coffee, while the graph shows all customers: it must switch.
+  - {id: q04-switch, template: 4, input: "忠誠客戶買咖啡時，最常一起買哪個產品類別？", scope: {segment: 忠誠客戶}, fills: {item: 咖啡}}
+
+  - {id: q07-all, template: 7, input: "哪個產品類別連結了最多其他產品類別？"}
+  - {id: q07-90d, template: 7, input: "最近 90 天，哪個產品類別連結了最多其他產品類別？", filters: {days: 90}}
+  - {id: q07-30d, template: 7, input: "最近 30 天，哪個產品類別是連結其他類別的橋樑？", filters: {days: 30}}
+  - {id: q07-vip, template: 7, input: "重要價值客戶中，哪個產品類別是連結其他類別的橋樑？", filters: {segment: 重要價值客戶}}
+  - {id: q07-trap, template: 7, kind: trap, input: "保健食品連結了哪些產品類別？", missing: 保健食品}
+  - {id: q07-switch, template: 7, input: "最近 90 天，哪個產品類別連結了最多其他產品類別？", scope: {days: 90}}
+
+  - {id: q08-all, template: 8, input: "哪個群組的營收最高？它包含哪些產品類別？"}
+  - {id: q08-30d, template: 8, input: "最近 30 天，哪個群組的營收最高？它包含哪些產品類別？", filters: {days: 30}}
+  - {id: q08-vip, template: 8, input: "重要價值客戶中，哪個群組的營收最高？它包含哪些產品類別？", filters: {segment: 重要價值客戶}}
+  - {id: q08-new, template: 8, input: "新客戶中，哪個群組的營收最高？它包含哪些產品類別？", filters: {segment: 新客戶}}
+  - {id: q08-switch-segment, template: 8, input: "沉睡客戶中，哪個群組的營收最高？它包含哪些產品類別？", scope: {segment: 沉睡客戶}}
+  - {id: q08-switch-days, template: 8, input: "最近 30 天，哪個群組的營收最高？它包含哪些產品類別？", scope: {days: 30}}
+
+  - {id: q09-milk-tissue, template: 9, input: "鮮乳和衛生紙一起購買的頻率，是否高於隨機預期？", fills: {a: 鮮乳, b: 衛生紙}}
+  - {id: q09-detergent-shampoo, template: 9, input: "洗衣精和洗髮精一起購買的頻率，是否高於隨機預期？", fills: {a: 洗衣精, b: 洗髮精}}
+  - {id: q09-new-cola-chips, template: 9, input: "新客戶中，可樂和洋芋片一起購買的頻率，是否高於隨機預期？", filters: {segment: 新客戶}, fills: {a: 可樂, b: 洋芋片}}
+  - {id: q09-90d-milk-tissue, template: 9, input: "最近 90 天，鮮乳和衛生紙一起購買的頻率，是否高於隨機預期？", filters: {days: 90}, fills: {a: 鮮乳, b: 衛生紙}}
+  - {id: q09-trap, template: 9, kind: trap, input: "鮮乳和嬰兒奶粉一起購買的頻率，是否高於隨機預期？", missing: 嬰兒奶粉}
+  - {id: q09-hidden, template: 9, kind: trap, input: "紅酒和起司一起購買的頻率，是否高於隨機預期？", hidden: {a: 紅酒, b: 起司}}
+
+  - {id: q11-all-milk, template: 11, input: "鮮乳這個類別中，哪個商品最暢銷？", fills: {item: 鮮乳}}
+  - {id: q11-all-noodles, template: 11, input: "泡麵這個類別中，哪個商品最暢銷？", fills: {item: 泡麵}}
+  - {id: q11-loyal-tissue, template: 11, input: "忠誠客戶在衛生紙這個類別中，最常買哪個商品？", filters: {segment: 忠誠客戶}, fills: {item: 衛生紙}}
+  - {id: q11-new-milk, template: 11, input: "新客戶在鮮乳這個類別中，最常買哪個商品？", filters: {segment: 新客戶}, fills: {item: 鮮乳}}
+  - {id: q11-trap, template: 11, kind: trap, input: "寵物食品這個類別中，哪個商品最暢銷？", missing: 寵物食品}
+  - {id: q11-switch, template: 11, input: "忠誠客戶在鮮乳這個類別中，最常買哪個商品？", scope: {segment: 忠誠客戶}, fills: {item: 鮮乳}}
+
+  - {id: q12-all-coffee, template: 12, input: "咖啡和哪些產品類別屬於同一個群組？", fills: {item: 咖啡}}
+  - {id: q12-all-detergent, template: 12, input: "洗衣精和哪些產品類別屬於同一個群組？", fills: {item: 洗衣精}}
+  - {id: q12-vip-coffee, template: 12, input: "重要價值客戶中，咖啡和哪些產品類別屬於同一個群組？", filters: {segment: 重要價值客戶}, fills: {item: 咖啡}}
+  - {id: q12-30d-noodles, template: 12, input: "最近 30 天，泡麵和哪些產品類別屬於同一個群組？", filters: {days: 30}, fills: {item: 泡麵}}
+  - {id: q12-trap, template: 12, kind: trap, input: "冷凍水餃和哪些產品類別屬於同一個群組？", missing: 冷凍水餃}
+  - {id: q12-switch, template: 12, input: "重要價值客戶中，咖啡和哪些產品類別屬於同一個群組？", scope: {segment: 重要價值客戶}, fills: {item: 咖啡}}
+
+  - {id: q13-90d, template: 13, input: "最近 90 天，哪五個產品類別出現在最多購物籃中？", filters: {days: 90}}
+  - {id: q13-loyal, template: 13, input: "忠誠客戶中，哪五個產品類別出現在最多購物籃中？", filters: {segment: 忠誠客戶}}
+  - {id: q13-vip, template: 13, input: "重要價值客戶中，哪五個產品類別的訂單數最多？", filters: {segment: 重要價值客戶}}
+  - {id: q13-new, template: 13, input: "新客戶中，哪五個產品類別的訂單數最多？", filters: {segment: 新客戶}}
+  - {id: q13-trap, template: 13, kind: trap, input: "保健食品出現在多少個購物籃中？", missing: 保健食品}
+  - {id: q13-switch, template: 13, input: "沉睡客戶中，哪五個產品類別的訂單數最多？", scope: {segment: 沉睡客戶}}
+
+  - {id: q14-coffee-loyal-new, template: 14, input: "比較忠誠客戶和新客戶：買咖啡時最常一起買的產品類別有什麼不同？", compare: [{segment: 忠誠客戶}, {segment: 新客戶}], fills: {item: 咖啡}}
+  - {id: q14-coffee-loyal-all, template: 14, input: "忠誠客戶買咖啡時最常搭配的產品類別，和全體客戶相比有什麼不同？", compare: [{segment: 忠誠客戶}, {}], fills: {item: 咖啡}}
+  - {id: q14-milk-30d-all, template: 14, input: "比較最近 30 天和全部期間：買鮮乳時最常一起買的產品類別有什麼不同？", compare: [{days: 30}, {}], fills: {item: 鮮乳}}
+  - {id: q14-coffee-loyal-90d, template: 14, input: "比較忠誠客戶和最近 90 天的全體客戶：買咖啡時最常一起買的產品類別有什麼不同？", compare: [{segment: 忠誠客戶}, {days: 90}], fills: {item: 咖啡}}
+  - {id: q14-trap, template: 14, kind: trap, input: "比較忠誠客戶和新客戶：買貓砂時最常一起買的產品類別有什麼不同？", missing: 貓砂}
+  - {id: q14-no-segment, template: 14, kind: trap, input: "比較白金會員和新客戶：買咖啡時最常一起買的產品類別有什麼不同？", no_segment: 白金會員}
+
+  # The user's words are not the data's: a product's name, a near miss, another word for it.
+  - {id: q04-product-name, template: 4, input: "買乾拌麵的人，最常一起買哪個產品類別？", fills: {item: 泡麵}, find: true}
+  - {id: q04-near-miss, template: 4, input: "買洗髮乳時，最常一起買哪個產品類別？", fills: {item: 洗髮精}, find: true}
+  - {id: q04-other-word, template: 4, input: "買牛奶時，最常一起買哪個產品類別？", fills: {item: 鮮乳}, find: true}
+
+  - {id: q15-all, template: 15, input: "哪三個產品類別最常被一起購買？"}
+  - {id: q15-90d, template: 15, input: "最近 90 天，哪三個產品類別最常被一起購買？", filters: {days: 90}}
+  - {id: q15-trap, template: 15, kind: trap, input: "包含寵物食品的三個產品類別組合中，哪一組最常被一起購買？", missing: 寵物食品}
+
+  - {id: q16-loyal-new, template: 16, kind: open, input: "忠誠客戶和新客戶買東西的組合有什麼不同？", compare: [{segment: 忠誠客戶}, {segment: 新客戶}]}
+  - {id: q16-30d-all, template: 16, kind: open, input: "最近 30 天和全部期間相比，大家一起買的東西有什麼變化？", compare: [{days: 30}, {}]}
+  - {id: q16-vip-all, template: 16, kind: open, input: "重要價值客戶的購買組合，和全體客戶有什麼不一樣？", compare: [{segment: 重要價值客戶}, {}]}
+
+  - {id: q17-all, template: 17, kind: open, input: "哪些產品類別各自都常和同樣的類別一起買，彼此卻還不常一起買？它們有成長潛力嗎？"}
+  - {id: q18-all, template: 18, kind: open, input: "有沒有哪個客群特別常一起買、全體客戶卻不常一起買的產品類別組合？"}

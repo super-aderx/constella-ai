@@ -1,8 +1,8 @@
 """Reads the invoice table and builds the network of product types: items, pairs, communities.
 
-An item is a product type (the item_tag column), not a single product. The queries are in app/sql.
-They assume a table `invoice` with one row per invoice line and the columns inv_num, item_tag,
-item_name, amount, segment (the customer's RFM segment) and datetime.
+An item is a product type (the item_tag column), not a single product. The queries are in
+app/infra/sql. They assume a table `invoice` with one row per invoice line and the columns
+inv_num, item_tag, item_name, amount, segment (the customer's RFM segment) and datetime.
 """
 
 import os
@@ -15,7 +15,7 @@ from psycopg.rows import dict_row
 
 SQL = Path(__file__).parent / "sql"
 
-MIN_CO_ORDERS = 60  # out of all the data: a pair seen in fewer baskets is an outlier
+MIN_CO_ORDERS = 30  # out of all the data: a pair seen in fewer baskets is an outlier
 MIN_CO_ORDERS_FLOOR = 5  # and never fewer than this, however little data a filter leaves
 MAX_REVENUE_ITEMS = 10  # revenue leaders kept even with no pair: few orders, high revenue
 MAX_PRODUCTS = 5  # products listed under each product type
@@ -56,7 +56,59 @@ def load_network(days: int | None = None, segment: str | None = None) -> dict:
             if p["tag"] == item["name"]
         ]
     network = build_network(items, pairs, baskets)
-    return {**network, "minCoOrders": threshold, "segments": segments}
+    return {**network, "baskets": baskets, "minCoOrders": threshold, "segments": segments}
+
+
+def query(name: str, params: dict | None = None) -> list[dict]:
+    """Runs one of the queries in app/infra/sql, read-only, on its own connection."""
+    read_only = "-c default_transaction_read_only=on"
+    with psycopg.connect(
+        os.environ["DATABASE_URL"], row_factory=dict_row, options=read_only
+    ) as conn:
+        return conn.execute((SQL / f"{name}.sql").read_text(), params).fetchall()
+
+
+@lru_cache
+def load_catalog() -> dict[str, list[str]]:
+    """Every product type in the data and its products, read once: what names are looked up in.
+
+    It covers all the data, whatever a graph shows, so a product type that is too rare for a
+    graph can still be recognised and said to be off it.
+    """
+    catalog: dict[str, list[str]] = {}
+    for row in query("catalog"):
+        catalog.setdefault(row["tag"], []).append(row["name"])
+    return catalog
+
+
+@lru_cache
+def load_bundles(days: int | None = None, segment: str | None = None) -> list[dict]:
+    """The sets of three product types bought together, for one filter, most baskets first.
+
+    Only triangles of the graph count: three types where each two are a pair on it, so the graph
+    can highlight the whole set. A set needs half the baskets a pair does, since three in one
+    basket is rarer, and never fewer than MIN_CO_ORDERS_FLOOR.
+    """
+    network = load_network(days, segment)
+    pairs = {(p["a"], p["b"]) for p in network["pairs"]}
+    orders = {i["name"]: i["orders"] for i in network["items"]}
+    names = sorted({name for pair in pairs for name in pair})
+    floor = max(MIN_CO_ORDERS_FLOOR, network["minCoOrders"] // 2)
+    scope = {"days": days, "segment": segment, "names": names, "min_co_orders": floor}
+    baskets = network["baskets"]
+    bundles = [
+        {
+            "items": [r["a"], r["b"], r["c"]],
+            "coOrders": r["co_orders"],
+            # How many times more often the three share a basket than chance predicts.
+            "lift": round(
+                r["co_orders"] * baskets**2 / (orders[r["a"]] * orders[r["b"]] * orders[r["c"]]), 2
+            ),
+        }
+        for r in query("bundles", scope)
+        if {(r["a"], r["b"]), (r["b"], r["c"]), (r["a"], r["c"])} <= pairs
+    ]
+    return sorted(bundles, key=lambda b: (-b["coOrders"], b["items"]))
 
 
 def min_co_orders(baskets: int, all_baskets: int) -> int:
