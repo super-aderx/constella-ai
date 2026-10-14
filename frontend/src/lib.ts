@@ -48,6 +48,20 @@ export function callSummary(tool: string, args: Record<string, unknown>) {
   return scope ? `${lookup(args)} · ${scope}` : lookup(args)
 }
 
+/** Whether a written number states a figure, allowing for rounding as the reviewer does (backend/app/roles/reviewer.py): 2.104 written as 2.10. */
+export const close = (written: number, value: number) => Math.abs(written - value) <= Math.max(0.01, 0.005 * Math.abs(value))
+
+/** A text cut at each number it writes (1234.5 or 1,234.5), each number with the figure it states, if any. */
+export function citeParts<F extends { value: number }>(text: string, figures: F[]): { text: string; figure?: F }[] {
+  // Splitting on a captured number puts the numbers at the odd places.
+  return text.split(/(\d+(?:,\d{3})*(?:\.\d+)?)/).map((part, i) => {
+    if (i % 2 === 0) return { text: part }
+    const written = Number(part.replaceAll(",", ""))
+    const figure = figures.filter((f) => close(written, f.value)).sort((x, y) => Math.abs(written - x.value) - Math.abs(written - y.value))[0]
+    return { text: part, figure }
+  })
+}
+
 /** One key for a pair, whichever way round it is named. */
 export const pairKey = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`)
 

@@ -24,6 +24,36 @@ def numbers(value) -> list[float]:
     return [value] if isinstance(value, int | float) and not isinstance(value, bool) else []
 
 
+def field(name: str) -> str:
+    """A name as fields are matched: co_orders and coOrders alike."""
+    return re.sub(r"[^a-z0-9]", "", name.lower())
+
+
+def by_field(value, name: str = "") -> dict[str, list[float]]:
+    """Every number in a tool result, under the field it is in, however it is nested."""
+    found: dict[str, list[float]] = {}
+    if isinstance(value, dict):
+        parts = [by_field(v, field(k)) for k, v in value.items()]
+    elif isinstance(value, list):
+        parts = [by_field(v, name) for v in value]
+    else:
+        parts = [{name: numbers(value)}]
+    for part in parts:
+        for key, values in part.items():
+            found.setdefault(key, []).extend(values)
+    return found
+
+
+def cited(figure: dict, result) -> bool:
+    """Whether a tool result holds a figure. When the figure is named after a field of the result,
+    the value must be in that field: a pair's coOrders is not its lift. Other names ("baskets
+    shared") match any number in the result."""
+    fields = by_field(result)
+    name = field(figure["name"])
+    pool = fields[name] if name in fields else numbers(result)
+    return any(close(figure["value"], n) for n in pool)
+
+
 def written(text: str) -> list[float]:
     """Every number written in a piece of text: 1,234.5 as 1234.5."""
     return [float(n.replace(",", "")) for n in NUMBER.findall(text)]
@@ -47,14 +77,14 @@ def review(reply: dict, ledger: list[dict], networks: list[dict], context: str =
     as the agent was told it.
     """
     notes = []
-    results = {entry["id"]: numbers(entry["result"]) for entry in ledger}
+    results = {entry["id"]: entry["result"] for entry in ledger}
 
-    # 1. Every figure is in the tool result it cites.
+    # 1. Every figure is in the tool result it cites, in the field it is named after.
     for figure in reply["figures"]:
         label = f"{figure['name']} = {figure['value']:g}"
         if figure["source"] not in results:
             notes.append(f"{label} cites {figure['source']}, which is not a tool call you made.")
-        elif not any(close(figure["value"], n) for n in results[figure["source"]]):
+        elif not cited(figure, results[figure["source"]]):
             notes.append(f"{label} is not in {figure['source']}. State it as the tool returned it.")
 
     # 2. Every number in the text comes from the question or from a tool: none worked out,

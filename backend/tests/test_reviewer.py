@@ -69,6 +69,8 @@ def test_a_reply_with_no_figures_passes():
         # number in the text no tool returned, an item and a pair that are not on the graph.
         ({"figures": [{"name": "lift", "value": 3.1, "source": "L1"}]}, "lift = 3.1 is not in L1"),
         ({"figures": [{"name": "co_orders", "value": 186, "source": "L2"}]}, "is not in L2"),
+        # In the cited result, but under another field: 186 is the pair's coOrders, not its lift.
+        ({"figures": [{"name": "lift", "value": 186, "source": "L1"}]}, "lift = 186 is not in L1"),
         ({"figures": [{"name": "lift", "value": 2.1, "source": "L9"}]}, "cites L9"),
         ({"text": "提升度為 2.10，約佔所有購物籃的 12.4%。"}, "12.4 in your text"),
         ({"items": ["吐司", "鮮乳", "寵物食品"]}, "寵物食品 is not a product type on the graph"),

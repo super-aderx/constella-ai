@@ -19,6 +19,7 @@ test: ## Run the backend's unit tests (no database or API key needed)
 	cd backend && uv run pytest
 
 golden: ## Rebuild the golden set from the sample data (refills the test database)
+	cd backend && uv run python -m evals.make_sample
 	cd backend && uv run --env-file .env python -m evals.build
 
 eval: ## Score the whole system on the golden set (needs the database and OPENAI_API_KEY)

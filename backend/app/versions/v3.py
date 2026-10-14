@@ -32,6 +32,8 @@ class Answer(v2.Answer):
 
     plan: Route
     strategy: writer.Pitched | None
+    # None for a refusal: nothing was looked up, so there was nothing to check.
+    review: Review | None
 
 
 async def ask(
@@ -49,7 +51,7 @@ async def ask(
             figures=[],
             options=plan.options,
             ledger=[],
-            review=Review(passed=True, caught=[], notes=[]),
+            review=None,
             chart=None,
             plan=route,
             strategy=None,

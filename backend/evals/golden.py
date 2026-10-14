@@ -28,7 +28,7 @@ from deepeval.test_case import LLMTestCase
 # The agent reads the sample, never the real data.
 os.environ["DATABASE_URL"] = os.environ["TEST_DATABASE_URL"]
 
-from app.roles.reviewer import close, numbers  # noqa: E402
+from app.roles.reviewer import cited, close  # noqa: E402
 
 GOLDEN = json.loads((Path(__file__).parent / "data" / "golden.json").read_text("utf-8"))
 
@@ -77,11 +77,9 @@ def answer_problems(case: dict, answer: dict) -> list[str]:
         if not any(close(value, figure["value"]) for value in figures):
             problems.append(f"missing figure: {figure['name']} = {figure['value']}")
     # A figure is grounded when the ledger entry it cites holds that number. v1 cites nothing.
-    results = {entry["id"]: numbers(entry["result"]) for entry in answer["ledger"]}
+    results = {entry["id"]: entry["result"] for entry in answer["ledger"]}
     for figure in answer["figures"]:
-        if figure["source"] and not any(
-            close(figure["value"], n) for n in results.get(figure["source"], [])
-        ):
+        if figure["source"] and not cited(figure, results.get(figure["source"], [])):
             problems.append(f"{figure['name']} = {figure['value']} is not in {figure['source']}")
     return problems
 

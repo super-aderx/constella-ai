@@ -144,7 +144,10 @@ function HeatMap({ rows, value }: { rows: Row[]; value: string }) {
                 return v == null ? (
                   <td key={column} className="size-5 rounded-[3px] bg-surface-raised" />
                 ) : (
-                  <td key={column} className="size-5 rounded-[3px]" style={{ background: step(v) }} title={`${row} + ${column}: ${written(v)}`} />
+                  <td key={column} className="size-5 rounded-[3px]" style={{ background: step(v) }} title={`${row} + ${column}: ${written(v)}`}>
+                    {/* The value in words too, for screen readers: colour and hover are not enough. */}
+                    <span className="sr-only">{`${row} + ${column}: ${written(v)}`}</span>
+                  </td>
                 )
               })}
             </tr>

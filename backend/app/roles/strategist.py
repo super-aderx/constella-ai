@@ -103,7 +103,9 @@ def campaign_problems(
             problems.append(f"The user has set {name} aside. Build on other product types.")
     if campaign.basis == "potential":
         # A bet has to be one the data suggested: a candidate a tool returned in this run.
-        if frozenset(items) not in candidates(ledger):
+        if len(items) != 2 or len(set(items)) != 2:
+            problems.append("`items` takes exactly two different product types for a potential.")
+        elif frozenset(items) not in candidates(ledger):
             problems.append(f"{' + '.join(items)} is not a candidate potential_pairs returned.")
     else:
         if not 2 <= len(set(items)) <= 3 or len(set(items)) != len(items):
@@ -120,11 +122,17 @@ def campaign_problems(
 
 
 def strategy_problems(
-    strategy: Strategy, network: dict, ledger: list[dict], ignored: Sequence[str] = ()
+    strategy: Strategy, networks: list[dict], ledger: list[dict], ignored: Sequence[str] = ()
 ) -> list[str]:
-    """Why a set of options cannot go out as written; empty when it can."""
+    """Why a set of options cannot go out as written; empty when it can. `networks` are the
+    graphs of the reply's views: a campaign after a comparison runs on one of the two scopes, so
+    it passes when it can run on either. Otherwise it shows what is wrong on the closest one."""
     campaigns = strategy.campaigns
-    problems = [p for c in campaigns for p in campaign_problems(c, network, ledger, ignored)]
+    problems = [
+        p
+        for c in campaigns
+        for p in min((campaign_problems(c, n, ledger, ignored) for n in networks), key=len)
+    ]
     if not 2 <= len(campaigns) <= 3:
         problems.append("Give two or three campaigns.")
     sets = [frozenset(c.items) for c in campaigns]
@@ -136,8 +144,12 @@ def strategy_problems(
 async def draft(question: str, reply: Reply, run: Run) -> tuple[Strategy, list[str], list[str]]:
     """Campaign options for a reviewed reply: the strategy, what the reviewer caught first, and
     what is still wrong after the one retry."""
-    view = reply.views[0]
-    network = await asyncio.to_thread(load_network, view.days, view.segment)
+    # One graph per view: two for a comparison, and a campaign may build on either side.
+    networks = list(
+        await asyncio.gather(
+            *(asyncio.to_thread(load_network, v.days, v.segment) for v in reply.views)
+        )
+    )
     low, high = DISCOUNT
     instructions = RULES.format(
         views=json.dumps([v.model_dump() for v in reply.views], ensure_ascii=False),
@@ -169,8 +181,8 @@ async def draft(question: str, reply: Reply, run: Run) -> tuple[Strategy, list[s
         # Besides the question, the offers' own numbers may appear in the text.
         discounts = " ".join(str(c.discount_percent) for c in campaigns)
         context = f"{question}\n{instructions}\n{discounts}"
-        problems = strategy_problems(strategy, network, run.ledger, run.ignored)
-        return problems + review(claims, run.ledger, [network], context)
+        problems = strategy_problems(strategy, networks, run.ledger, run.ignored)
+        return problems + review(claims, run.ledger, networks, context)
 
     brief = {"question": question, "analyst_answer": reply.text, "ledger": run.ledger}
     progress.step("strategist")

@@ -1,5 +1,5 @@
 import { GenMark } from "../Brand"
-import { callSummary, callText, cn } from "../lib"
+import { callSummary, callText, citeParts, cn } from "../lib"
 import type { Answer, Figure, Review, Strategy, ToolCall } from "../types"
 import { Chart } from "./Chart"
 
@@ -24,19 +24,16 @@ const sourceTag = "ml-0.5 text-[10px] font-medium text-ink-muted"
 
 /** The answer's text, with each figure it states marked by the ledger entry it came from. */
 function Cited({ text, figures }: { text: string; figures: Figure[] }) {
-  // A figure can be written plain or with thousands separators: 1234.5 or 1,234.5.
-  const source = new Map(figures.flatMap((f) => [String(f.value), f.value.toLocaleString("en-US")].map((written) => [written, f.source])))
-  if (source.size === 0) return text
-  const written = [...source.keys()].sort((a, b) => b.length - a.length).map((n) => n.replace(".", "\\."))
-  // Longest first, and never inside a longer number.
-  return text.split(new RegExp(`(?<![\\d.,])(${written.join("|")})(?![\\d]|[.,]\\d)`)).map((part, i) =>
-    source.has(part) ? (
+  if (figures.length === 0) return text
+  // A figure may be written rounded, as the reviewer allows: 2.104 as 2.10.
+  return citeParts(text, figures).map((part, i) =>
+    part.figure ? (
       <span key={i} className="font-semibold tabular-nums">
-        {part}
-        <sup className={sourceTag}>{source.get(part)}</sup>
+        {part.text}
+        <sup className={sourceTag}>{part.figure.source}</sup>
       </span>
     ) : (
-      part
+      part.text
     ),
   )
 }

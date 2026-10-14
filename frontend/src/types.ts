@@ -83,7 +83,8 @@ export interface Answer {
   /** From the agent with tools (v2) only: the figures it states and the calls behind them. */
   figures?: Figure[]
   ledger?: ToolCall[]
-  review?: Review
+  /** Null for a refusal (v3): nothing was looked up, so nothing was checked. */
+  review?: Review | null
   /**
    * The scope the answer is about, or the two scopes it compares. The graph follows: it switches
    * to the first, and splits in two for a comparison.

@@ -65,6 +65,8 @@ def test_a_campaign_that_can_run_passes(changes: dict):
         ({"audience": "白金會員"}, "白金會員 is not a segment"),
         # A bet the data never suggested.
         ({"basis": "potential", "items": ["啤酒", "雞蛋"]}, "not a candidate potential_pairs"),
+        # The candidate's two types, with one of them twice.
+        ({"basis": "potential", "items": ["吐司", "優格", "吐司"]}, "exactly two different"),
     ],
 )
 def test_a_campaign_that_cannot_run_is_refused(changes: dict, problem: str):
@@ -73,7 +75,7 @@ def test_a_campaign_that_cannot_run_is_refused(changes: dict, problem: str):
 
 def options(*campaigns: Campaign) -> list[str]:
     strategy = Strategy(text="三個選項", campaigns=list(campaigns), figures=[])
-    return strategy_problems(strategy, NETWORK, LEDGER)
+    return strategy_problems(strategy, [NETWORK], LEDGER)
 
 
 def test_two_options_that_differ_pass():
@@ -87,6 +89,16 @@ def test_one_option_is_not_a_choice():
 def test_the_same_bundle_twice_is_not_a_choice():
     found = options(campaign(), campaign(name="換個名字", items=["吐司", "鮮乳"]))
     assert any("bundle the same product types" in problem for problem in found)
+
+
+def test_a_comparison_checks_each_campaign_on_the_scope_it_runs_on():
+    # The second scope of a comparison: 啤酒 + 雞蛋 sell together there, not in the first.
+    other = {**NETWORK, "pairs": [{"a": "啤酒", "b": "雞蛋"}]}
+    beer = campaign(name="週末組合", items=["啤酒", "雞蛋"])
+    strategy = Strategy(text="兩個選項", campaigns=[campaign(), beer], figures=[])
+    assert strategy_problems(strategy, [NETWORK, other], LEDGER) == []
+    found = strategy_problems(strategy, [NETWORK], LEDGER)
+    assert any("啤酒 is not a pair on the graph" in problem for problem in found)
 
 
 def test_a_campaign_on_a_type_the_user_set_aside_is_refused():
