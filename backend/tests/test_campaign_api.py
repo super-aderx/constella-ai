@@ -69,7 +69,13 @@ def saves(monkeypatch: pytest.MonkeyPatch) -> list:
     """Stands in for the database, and records every call to the store."""
     calls = []
     monkeypatch.setattr(data, "load_catalog", lambda: CATALOG)
-    monkeypatch.setattr(data, "load_network", lambda *a: {"segments": SEGMENTS})
+
+    def load_network(*args):
+        raise AssertionError("the whole network was built for its segment names")
+
+    monkeypatch.setattr(data, "load_network", load_network)
+    monkeypatch.setattr(store, "load_segments", lambda: SEGMENTS)
+    monkeypatch.setattr(store, "campaign_by_token", lambda token: None)
 
     def load_counties():
         calls.append("load_counties")
@@ -123,6 +129,26 @@ def test_a_repeated_token_returns_the_saved_campaign(saves: list, monkeypatch):
     response = client.post("/api/campaigns", json=body(title="Changed since"))
     assert response.status_code == 200
     assert response.json() == saved_for(first).model_dump(mode="json")
+
+
+def test_a_retry_after_the_start_date_returns_the_saved_campaign(saves: list, monkeypatch):
+    # Saved yesterday to start yesterday, and the response was lost: the identical retry must get
+    # the stored campaign back, not a "Must be today or later." the rules would now give.
+    yesterday = (date.today() - timedelta(days=1)).isoformat()
+    sent = body(starts_on=yesterday, ends_on=yesterday, pilot=None)
+    stored = saved_for(CampaignDraft.model_validate(sent))
+    tokens = []
+
+    def campaign_by_token(token):
+        tokens.append(str(token))
+        return stored
+
+    monkeypatch.setattr(store, "campaign_by_token", campaign_by_token)
+    response = client.post("/api/campaigns", json=sent)
+    assert response.status_code == 200
+    assert response.json() == stored.model_dump(mode="json")
+    assert tokens == [sent["client_token"]]
+    assert saves == []
 
 
 @pytest.mark.parametrize(
@@ -186,7 +212,9 @@ def test_a_broken_rule_is_reported_by_the_real_check(saves: list):
     ]
 
 
-@pytest.mark.parametrize("failing", ["load_counties", "save_campaign"])
+@pytest.mark.parametrize(
+    "failing", ["campaign_by_token", "load_segments", "load_counties", "save_campaign"]
+)
 def test_a_database_failure_is_a_500(failing: str, saves: list, monkeypatch, caplog):
     def fail(*args):
         raise psycopg.OperationalError("connection refused")

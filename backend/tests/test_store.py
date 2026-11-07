@@ -6,7 +6,7 @@ from uuid import UUID
 from psycopg.types.json import Jsonb
 
 from app.campaigns import CampaignDraft
-from app.infra.store import campaign_params, pilot_params, saved_from_rows
+from app.infra.store import campaign_params, pilot_params, saved_from_joined, saved_from_rows
 
 CAMPAIGN_ID = UUID("6f1e2d3c-4b5a-4968-8776-655443322110")
 CREATED_AT = datetime(2026, 11, 7, 9, 30, tzinfo=UTC)
@@ -102,3 +102,23 @@ def test_no_pilot_and_no_proposal_map_to_none():
     saved = saved_from_rows(stored(params), None)
     assert saved.pilot is None
     assert saved.source_proposal is None
+
+
+def joined(params: dict, pilot: dict | None) -> dict:
+    """The row campaign_by_token.sql returns: the campaign, and its pilot's columns as pilot_*."""
+    fields = ["campaign_id", "audience_percent", "starts_on", "ends_on", "discount_percent"]
+    pilot_columns = {f"pilot_{f}": (pilot or {}).get(f) for f in [*fields, "auto_start"]}
+    return {**stored(params), **pilot_columns}
+
+
+def test_a_campaign_read_back_by_token_keeps_its_pilot():
+    d = draft()
+    row = joined(campaign_params(d, CAMPAIGN_ID), pilot_params(d.pilot, CAMPAIGN_ID))
+    saved = saved_from_joined(row)
+    assert saved.pilot == d.pilot
+    assert saved.products == d.products
+
+
+def test_a_campaign_read_back_by_token_without_a_pilot_has_none():
+    d = draft(pilot=None)
+    assert saved_from_joined(joined(campaign_params(d, CAMPAIGN_ID), None)).pilot is None

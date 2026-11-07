@@ -75,6 +75,22 @@ def saved_from_rows(campaign: dict, pilot: dict | None) -> SavedCampaign:
     )
 
 
+def saved_from_joined(row: dict) -> SavedCampaign:
+    """A stored campaign from a campaign_by_token.sql row, whose pilot columns are pilot_*."""
+    pilot = {f: row[f"pilot_{f}"] for f in PILOT_FIELDS}
+    return saved_from_rows(row, pilot if row["pilot_campaign_id"] is not None else None)
+
+
+def campaign_by_token(client_token: UUID) -> SavedCampaign | None:
+    """The campaign saved with this client_token, or None. Read-only.
+
+    A retry is answered from here before any rule runs: a campaign that started today and was
+    saved, but whose response was lost, would fail "Must be today or later." after midnight.
+    """
+    rows = data.query("campaign_by_token", {"client_token": client_token})
+    return saved_from_joined(rows[0]) if rows else None
+
+
 def save_campaign(draft: CampaignDraft) -> tuple[SavedCampaign, bool]:
     """Stores a campaign and its pilot, once per client_token: the stored campaign, and whether
     this call created it. A repeated token returns what is stored, unchanged."""
@@ -83,13 +99,19 @@ def save_campaign(draft: CampaignDraft) -> tuple[SavedCampaign, bool]:
         # One transaction, so a campaign is never stored without the pilot it was saved with.
         rows = _run(conn, "save_campaign", campaign_params(draft, campaign_id))
         if not rows:
+            # Another request with this token committed first (a double click racing itself).
             row = _run(conn, "campaign_by_token", {"client_token": draft.client_token})[0]
-            pilot = {f: row[f"pilot_{f}"] for f in PILOT_FIELDS}
-            has_pilot = row["pilot_campaign_id"] is not None
-            return saved_from_rows(row, pilot if has_pilot else None), False
+            return saved_from_joined(row), False
         params = pilot_params(draft.pilot, campaign_id)
         pilot = _run(conn, "save_pilot", params)[0] if params is not None else None
         return saved_from_rows(rows[0], pilot), True
+
+
+@lru_cache
+def load_segments() -> list[str]:
+    """Every customer segment, read once. The same query the network's segment list comes from,
+    without building the whole network for it."""
+    return [row["segment"] for row in data.query("segments")]
 
 
 @lru_cache

@@ -98,7 +98,7 @@ async def ask_stream(body: Question) -> StreamingResponse:
 @app.get("/api/campaign-options")
 def campaign_options() -> dict:
     """What the campaign wizard's segment and county fields offer."""
-    return {"segments": data.load_network()["segments"], "counties": store.load_counties()}
+    return {"segments": store.load_segments(), "counties": store.load_counties()}
 
 
 @app.get("/api/products/search")
@@ -115,10 +115,17 @@ SAVE_FAILED = {"detail": "Could not save the campaign."}
 def save_campaign(draft: campaigns.CampaignDraft, response: Response):
     """Checks a campaign against every rule and stores it: 201 when this call stored it, 200
     with the stored one when its client_token was saved before. A broken rule is a 422 in
-    FastAPI's own shape, so the app marks its fields the same way as a malformed body."""
+    FastAPI's own shape, so the app marks its fields the same way as a malformed body.
+
+    A saved token is answered before the rules run, so a retry gets the stored campaign even
+    when a rule would now fail it, such as a start date that was today when it was saved.
+    """
     try:
+        stored = store.campaign_by_token(draft.client_token)
+        if stored is not None:
+            return stored
         catalog = data.load_catalog()
-        segments = data.load_network()["segments"]
+        segments = store.load_segments()
         counties = store.load_counties()
     except Exception:
         logging.exception("Could not read what a campaign is checked against")
