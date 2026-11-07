@@ -10,6 +10,7 @@ from pydantic import BaseModel
 
 from app.infra.data import load_network
 from app.roles.analyst import Pair
+from app.roles.conversation import Turn
 
 RULES = """\
 You are Constella AI, an analyst for one store's network of product types: which types sell, and
@@ -63,8 +64,13 @@ def brief(network: dict, days: int | None, segment: str | None) -> str:
 
 
 async def ask(
-    question: str, days: int | None, segment: str | None, ignored: Sequence[str] = ()
+    question: str,
+    days: int | None,
+    segment: str | None,
+    ignored: Sequence[str] = (),
+    history: Sequence[Turn] = (),
 ) -> Answer:
+    # `history` is taken and not read: the baseline answers each question alone.
     # load_network reads the database synchronously: in a worker thread, so a filter it has not
     # seen yet does not hold up every other request.
     network = await asyncio.to_thread(load_network, days, segment)

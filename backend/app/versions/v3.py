@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from app.roles import router, strategist, writer
 from app.roles.analyst import Review, analyse
+from app.roles.conversation import Turn
 from app.versions import v2
 
 
@@ -37,9 +38,15 @@ class Answer(v2.Answer):
 
 
 async def ask(
-    question: str, days: int | None, segment: str | None, ignored: Sequence[str] = ()
+    question: str,
+    days: int | None,
+    segment: str | None,
+    ignored: Sequence[str] = (),
+    history: Sequence[Turn] = (),
 ) -> Answer:
-    plan = await router.plan(question)
+    # The earlier turns go to the roles that must tell what a follow-up means. Not the writer:
+    # it words campaigns the strategist has already fixed.
+    plan = await router.plan(question, history)
     route = Route(route=plan.route, strategy=plan.strategy, chart=plan.chart)
     if plan.route == "refuse":
         # Outside the store's sales: no tools are called, so there is nothing to review.
@@ -57,11 +64,11 @@ async def ask(
             strategy=None,
         )
 
-    reply, run, verdict = await analyse(question, days, segment, plan.strategy, ignored)
+    reply, run, verdict = await analyse(question, days, segment, plan.strategy, ignored, history)
     strategy = None
     # A campaign only on findings that passed review, and that state something to build on.
     if plan.strategy and verdict.passed and reply.figures:
-        drafted, caught, notes = await strategist.draft(question, reply, run)
+        drafted, caught, notes = await strategist.draft(question, reply, run, history)
         verdict = Review(
             passed=not notes, caught=verdict.caught + caught, notes=verdict.notes + notes
         )

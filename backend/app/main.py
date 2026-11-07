@@ -12,9 +12,12 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from app.infra import data, progress
+from app.roles.conversation import Turn
 from app.versions import v1, v2, v3
 
 app = FastAPI(title="Constella AI")
+
+MAX_TURNS = 10  # earlier turns a question may carry
 
 
 class Question(BaseModel):
@@ -26,6 +29,9 @@ class Question(BaseModel):
     # Product types the user has set aside: the graph still shows them and facts about them are
     # still answered, but no campaign is built on one.
     ignored: list[str] = Field(default_factory=list)
+    # The conversation before the question, oldest first, so a follow-up can be read. The app
+    # sends its last few turns; the cap keeps a run's input, and its cost, bounded.
+    history: list[Turn] = Field(default_factory=list, max_length=MAX_TURNS)
 
 
 @app.get("/api/network")
@@ -45,7 +51,7 @@ def chosen():
 
 @app.post("/api/ask")
 async def ask(body: Question) -> v3.Answer | v2.Answer | v1.Answer:
-    return await chosen().ask(body.question, body.days, body.segment, body.ignored)
+    return await chosen().ask(body.question, body.days, body.segment, body.ignored, body.history)
 
 
 @app.post("/api/ask/stream")
@@ -63,7 +69,9 @@ async def ask_stream(body: Question) -> StreamingResponse:
     async def run() -> None:
         progress.listen(send)
         try:
-            answer = await chosen().ask(body.question, body.days, body.segment, body.ignored)
+            answer = await chosen().ask(
+                body.question, body.days, body.segment, body.ignored, body.history
+            )
             send({"answer": answer.model_dump()})
         except Exception:
             # The stream has already answered 200, so a failure is a line of its own.

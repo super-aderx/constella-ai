@@ -5,6 +5,7 @@ needs after the analyst: the strategist, for something to do, and the scientist,
 """
 
 import os
+from collections.abc import Sequence
 from typing import Literal
 
 from agents import Agent, ModelSettings, Runner
@@ -12,11 +13,15 @@ from openai.types.shared import Reasoning
 from pydantic import BaseModel
 
 from app.infra import progress
+from app.roles.conversation import Turn, messages
 
 RULES = """\
 You are the router of Constella AI, an assistant for one retail store's sales data: which
 product types sell, which are bought together, in which customer segments and periods. Plan the
 run for the user's question. You do not answer it.
+
+Earlier turns of the conversation may come before the question. Read a short follow-up ("and new
+customers?", "a smaller discount") in their light: it is about what they were about.
 
 `route`:
 - "answer": the question is about this store's sales. Product types and their products, what
@@ -48,7 +53,7 @@ class Plan(BaseModel):
     options: list[str]
 
 
-async def plan(question: str) -> Plan:
+async def plan(question: str, history: Sequence[Turn] = ()) -> Plan:
     progress.step("router")
     agent = Agent(
         name="Constella AI router",
@@ -58,4 +63,4 @@ async def plan(question: str) -> Plan:
         model_settings=ModelSettings(reasoning=Reasoning(effort="low")),
         output_type=Plan,
     )
-    return (await Runner.run(agent, question)).final_output
+    return (await Runner.run(agent, messages(question, history))).final_output
