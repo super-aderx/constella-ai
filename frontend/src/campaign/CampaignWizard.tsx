@@ -1,0 +1,193 @@
+import { useEffect, useRef, useState, type MouseEvent } from "react"
+import { CampaignError, getCampaignOptions, saveCampaign } from "../api"
+import { cn } from "../lib"
+import type { Campaign, CampaignOptions, SavedCampaign } from "../types"
+import { CampaignStep } from "./CampaignStep"
+import { fromProposal, isDirty, toRequest, today, type FieldErrors, type WizardDraft } from "./draft"
+import { PilotStep } from "./PilotStep"
+import { ReviewStep } from "./ReviewStep"
+import { stepErrors, stepOf } from "./validate"
+
+type StepNumber = 1 | 2 | 3
+
+const STEPS: { n: StepNumber; label: string }[] = [
+  { n: 1, label: "Campaign" },
+  { n: 2, label: "Pilot" },
+  { n: 3, label: "Review" },
+]
+
+const button = "h-9 cursor-pointer rounded-lg px-4 text-[14px] font-medium transition-colors disabled:cursor-default"
+
+interface CampaignWizardProps {
+  proposal: Campaign
+  /** How many campaigns were already saved from this proposal: more than none warns before saving another. */
+  alreadySaved: number
+  onClose: () => void
+  onSaved: (campaign: SavedCampaign) => void
+}
+
+/** Whether a field's problem is still about what the field holds: it goes once the field is edited. */
+function stillHolds(key: string, before: WizardDraft, after: WizardDraft) {
+  const [field, part] = key.split(".")
+  if (field === "pilot" && part) return before.pilotOn === after.pilotOn && before.pilot[part as keyof WizardDraft["pilot"]] === after.pilot[part as keyof WizardDraft["pilot"]]
+  return before[field as keyof WizardDraft] === after[field as keyof WizardDraft]
+}
+
+/**
+ * Turns an AI proposal into a campaign, in a modal over the page: the campaign (step 1), an
+ * optional pilot (step 2), and a review before saving (step 3). The draft lives here, above the
+ * steps, so Back keeps every value. Each opening is one draft with its own token, so a double
+ * click or a retry stores it once; saving the same proposal again on purpose opens a new one.
+ */
+export function CampaignWizard({ proposal, alreadySaved, onClose, onSaved }: CampaignWizardProps) {
+  const [initial] = useState(() => fromProposal(proposal))
+  const [draft, setDraft] = useState(initial)
+  const [step, setStep] = useState<StepNumber>(1)
+  const [errors, setErrors] = useState<FieldErrors>({})
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [pending, setPending] = useState(false)
+  // State is too late to stop a double click: both clicks can run before a render.
+  const saving = useRef(false)
+  const [options, setOptions] = useState<CampaignOptions | null>(null)
+  const [optionsFailed, setOptionsFailed] = useState(false)
+  const dialog = useRef<HTMLDialogElement>(null)
+  // Where a click began: one that starts in a field and ends on the backdrop is not a click on the backdrop.
+  const pressed = useRef<EventTarget | null>(null)
+
+  useEffect(() => {
+    if (!dialog.current?.open) dialog.current?.showModal()
+  }, [])
+
+  useEffect(() => {
+    let live = true
+    getCampaignOptions().then(
+      (loaded) => live && setOptions(loaded),
+      () => live && setOptionsFailed(true),
+    )
+    return () => {
+      live = false
+    }
+  }, [])
+
+  const change = (patch: Partial<WizardDraft>) => {
+    const next = { ...draft, ...patch }
+    setDraft(next)
+    setErrors(Object.fromEntries(Object.entries(errors).filter(([key]) => stillHolds(key, draft, next))))
+  }
+
+  const requestClose = () => {
+    if (saving.current) return
+    if (isDirty(initial, draft) && !window.confirm("Discard this campaign draft?")) return
+    onClose()
+  }
+
+  const goNext = () => {
+    const found = stepErrors(step, draft, today())
+    // Only this step's problems are checked again: the server's problems on a later step stay to be seen there.
+    const later = Object.entries(errors).filter(([key]) => stepOf(key) !== step)
+    setErrors({ ...Object.fromEntries(later), ...found })
+    if (Object.keys(found).length === 0) setStep((step + 1) as StepNumber)
+  }
+
+  const goBack = () => setStep((step - 1) as StepNumber)
+
+  /** Shows a set of problems: on the first step that has a field for one, and the rest on the review. */
+  const showProblems = (found: FieldErrors, message: string) => {
+    setErrors(found)
+    const keys = Object.keys(found)
+    const steps = keys.map(stepOf).filter((n) => n !== null)
+    const unplaced = keys.filter((key) => stepOf(key) === null).map((key) => found[key])
+    setSaveError(unplaced.length > 0 ? unplaced.join(" ") : steps.length > 0 ? null : message)
+    setStep(steps.length > 0 ? (Math.min(...steps) as StepNumber) : 3)
+  }
+
+  const save = async () => {
+    if (saving.current) return
+    if (alreadySaved > 0 && !window.confirm("You already saved a campaign from this proposal. Save another?")) return
+    const found = stepErrors(3, draft, today())
+    if (Object.keys(found).length > 0) return showProblems(found, "")
+    saving.current = true
+    setPending(true)
+    setSaveError(null)
+    try {
+      const saved = await saveCampaign(toRequest(draft))
+      onSaved(saved)
+    } catch (error) {
+      // The draft and its token are kept: a retry cannot store the campaign twice.
+      saving.current = false
+      setPending(false)
+      if (error instanceof CampaignError && error.fields) showProblems(error.fields, error.message)
+      else setSaveError(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  const onBackdrop = (e: MouseEvent) => {
+    if (e.target === dialog.current && pressed.current === dialog.current) requestClose()
+  }
+
+  return (
+    <dialog
+      ref={dialog}
+      aria-labelledby="campaign-wizard-title"
+      // Escape is handled on the key, not on `cancel`: some browsers stop letting a repeated cancel be prevented.
+      onKeyDown={(e) => {
+        if (e.key !== "Escape") return
+        e.preventDefault()
+        requestClose()
+      }}
+      onCancel={(e) => {
+        e.preventDefault()
+        requestClose()
+      }}
+      onMouseDown={(e) => (pressed.current = e.target)}
+      onClick={onBackdrop}
+      // Tailwind's base styles zero the margin that centers a dialog, so it is put back.
+      className="m-auto max-h-[calc(100vh-2rem)] w-[min(640px,calc(100vw-2rem))] overflow-hidden rounded-xl bg-surface-raised p-0 text-ink shadow-pop backdrop:bg-ink/40"
+    >
+      <div className="flex max-h-[calc(100vh-2rem)] flex-col">
+        <header className="flex flex-col gap-3 border-b border-line px-6 pt-5 pb-4">
+          <div className="flex items-start justify-between gap-4">
+            <h2 id="campaign-wizard-title" className="text-[18px] font-semibold tracking-[-0.02em]">
+              Add as campaign
+            </h2>
+            <button type="button" aria-label="Close" onClick={requestClose} className="cursor-pointer px-1 text-[20px] leading-none text-ink-muted hover:text-ink">
+              ×
+            </button>
+          </div>
+          <ol className="flex items-center gap-2 text-[13px]">
+            {STEPS.map(({ n, label }, i) => (
+              <li key={n} aria-current={n === step ? "step" : undefined} className={cn("flex items-center gap-2", n === step ? "font-semibold text-ink" : "text-ink-muted")}>
+                {i > 0 && <span aria-hidden>·</span>}
+                <span className={cn("inline-grid size-5 place-items-center rounded-full text-[11px]", n === step ? "bg-action text-on-action" : "bg-field")}>{n}</span>
+                {label}
+              </li>
+            ))}
+          </ol>
+        </header>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+          {step === 1 && <CampaignStep draft={draft} errors={errors} onChange={change} options={options} optionsFailed={optionsFailed} today={today()} />}
+          {step === 2 && <PilotStep draft={draft} errors={errors} onChange={change} />}
+          {step === 3 && <ReviewStep draft={draft} error={saveError} />}
+        </div>
+
+        <footer className="flex items-center justify-end gap-2 border-t border-line px-6 py-4">
+          {step > 1 && (
+            <button type="button" onClick={goBack} disabled={pending} className={cn(button, "mr-auto bg-field hover:bg-line")}>
+              Back
+            </button>
+          )}
+          {step < 3 ? (
+            <button type="button" onClick={goNext} className={cn(button, "bg-action text-on-action")}>
+              Next
+            </button>
+          ) : (
+            <button type="button" onClick={save} disabled={pending} className={cn(button, "bg-action text-on-action disabled:bg-field disabled:text-ink-faint")}>
+              {pending ? "Saving…" : "Save"}
+            </button>
+          )}
+        </footer>
+      </div>
+    </dialog>
+  )
+}

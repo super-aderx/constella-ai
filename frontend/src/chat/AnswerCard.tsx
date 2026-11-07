@@ -1,9 +1,7 @@
 import { GenMark } from "../Brand"
-import { callSummary, callText, citeParts, cn } from "../lib"
+import { callSummary, callText, chip, citeParts, cn } from "../lib"
 import type { Answer, Figure, Review, Strategy, ToolCall } from "../types"
 import { Chart } from "./Chart"
-
-const chip = "cursor-pointer rounded-full bg-field px-3 py-1.5 text-left text-[13px] transition-colors hover:bg-line"
 
 /** Questions to ask, as quiet chips. */
 export function Options({ options, onPick, className }: { options: string[]; onPick: (question: string) => void; className?: string }) {
@@ -106,8 +104,20 @@ function Verdict({ review }: { review: Review }) {
   )
 }
 
-/** The strategist's part of an answer: what the options are, and each campaign as a card with the writer's slogans. */
-function Campaigns({ strategy }: { strategy: Strategy }) {
+/** What a proposal card needs to offer saving it as a campaign. */
+interface Adding {
+  /** Campaigns saved so far from each proposal, by its position in the answer. */
+  saved: number[]
+  /** Opens the wizard for the proposal at this position. */
+  onAddCampaign: (index: number) => void
+}
+
+/**
+ * The strategist's part of an answer: what the options are, and each campaign as a card with the
+ * writer's slogans and a way to save it as a campaign. Every proposal shown gets the button, even
+ * one that did not pass its check: the team decides, and the save is checked again.
+ */
+function Campaigns({ strategy, saved, onAddCampaign }: { strategy: Strategy } & Adding) {
   return (
     <section className="flex flex-col gap-3 border-t border-line pt-3">
       <p className="flex items-center gap-1.5 text-[12px] font-semibold text-ink-muted">
@@ -146,13 +156,17 @@ function Campaigns({ strategy }: { strategy: Strategy }) {
           <p className="mt-3 border-t border-line pt-2 text-[12px] text-ink-muted">
             <Cited text={campaign.reason} figures={strategy.figures} />
           </p>
+          {/* Still a button once saved: saving another from the same proposal is allowed, after a warning. */}
+          <button type="button" onClick={() => onAddCampaign(i)} className={cn(chip, "mt-3 font-medium", (saved[i] ?? 0) > 0 && "text-positive")}>
+            {(saved[i] ?? 0) > 0 ? "Saved ✓" : "Add as campaign"}
+          </button>
         </div>
       ))}
     </section>
   )
 }
 
-interface AnswerCardProps {
+interface AnswerCardProps extends Adding {
   answer: Answer
   /** What to ask after this answer. Empty when there is nothing to suggest. */
   next: string[]
@@ -164,7 +178,7 @@ interface AnswerCardProps {
 }
 
 /** One answer from the agent: its text with cited figures, the tool calls behind it, a way to light it up on the graph, and what to ask next. */
-export function AnswerCard({ answer, next, shown, onShow, onAsk }: AnswerCardProps) {
+export function AnswerCard({ answer, next, shown, onShow, onAsk, saved, onAddCampaign }: AnswerCardProps) {
   return (
     <article className="flex flex-col gap-3 rounded-xl bg-surface-raised p-4">
       <p className="flex items-center gap-1.5 text-[12px] font-semibold text-ink-muted">
@@ -175,7 +189,7 @@ export function AnswerCard({ answer, next, shown, onShow, onAsk }: AnswerCardPro
         <Cited text={answer.text} figures={answer.figures ?? []} />
       </p>
       {answer.options && answer.options.length > 0 && <Options options={answer.options} onPick={onAsk} />}
-      {answer.strategy && <Campaigns strategy={answer.strategy} />}
+      {answer.strategy && <Campaigns strategy={answer.strategy} saved={saved} onAddCampaign={onAddCampaign} />}
       {answer.chart && answer.ledger && <Chart chart={answer.chart} ledger={answer.ledger} />}
       {answer.review && <Verdict review={answer.review} />}
       {answer.ledger && answer.ledger.length > 0 && <Ledger ledger={answer.ledger} charted={answer.chart?.source} />}
