@@ -1,4 +1,4 @@
-.PHONY: help install backend frontend test golden eval eval-analyst eval-router eval-scientist eval-writer lint build
+.PHONY: help install migrate backend frontend test golden eval eval-analyst eval-router eval-scientist eval-writer lint build
 
 help: ## List the commands
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-10s %s\n", $$1, $$2}'
@@ -8,6 +8,9 @@ install: ## Install dependencies, the git hooks, and backend/.env if it is missi
 	cd frontend && npm install
 	prek install
 	@test -f backend/.env || (cp backend/.env.example backend/.env && echo "Created backend/.env: fill in DATABASE_URL and OPENAI_API_KEY")
+
+migrate: ## Create the campaign tables (safe to re-run)
+	cd backend && uv run --env-file .env python -m app.infra.migrate
 
 backend: ## Run the API on http://localhost:8000
 	cd backend && uv run --env-file .env fastapi dev app/main.py

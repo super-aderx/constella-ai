@@ -14,6 +14,7 @@ the root.
 
 ```bash
 make install     # uv sync, npm install, prek hooks, creates backend/.env from .env.example
+make migrate     # creates the campaign tables (app/infra/sql/schema/*.sql); safe to re-run
 make backend     # FastAPI dev server on :8000 (uv run --env-file .env fastapi dev app/main.py)
 make frontend    # Vite on :5173, proxies /api to :8000
 make test        # backend unit tests — no database or API key needed
@@ -46,6 +47,9 @@ frontend (React 19 + Vite + Tailwind 4) ──/api──▶ backend (FastAPI) �
   a min co-order threshold scaled to the scope), lift, communities and bridges with networkx.
 - It is `@lru_cache`d per scope: the data is assumed not to change while the server runs.
   `load_catalog` / `load_bundles` are cached the same way.
+- Campaign store: `app/infra/store.py` is the only module that writes (`campaign`,
+  `campaign_pilot`); `data.py` stays read-only. A campaign saved from an AI proposal keeps a copy
+  of it in `source_proposal`. The rules a campaign must keep are code in `app/campaigns.py`.
 - `GET /api/network` and every agent tool read this same function, so what the agent says about a
   scope and what the graph draws for it cannot disagree. Keep it that way: tools must not query
   the DB with their own thresholds.

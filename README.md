@@ -160,7 +160,7 @@ This installs the backend and frontend dependencies and the git hooks. It also c
 
 | Variable | |
 |---|---|
-| `DATABASE_URL` | Postgres with the `invoice` table. The API only reads from it. |
+| `DATABASE_URL` | Postgres with the `invoice` table. The API reads `invoice` and writes the campaign tables (`make migrate` creates them). |
 | `OPENAI_API_KEY` | Required |
 | `TEST_DATABASE_URL` | An empty database for the evals. **Never the real one:** the evals drop and refill its `invoice` table. |
 | `OPENAI_MODEL` | Optional. Unset uses the Agents SDK's default model. |
@@ -168,6 +168,12 @@ This installs the backend and frontend dependencies and the git hooks. It also c
 | `ROUTER_MODEL` | Optional. A smaller model for the router. |
 | `WRITER_MODEL` | Optional. The model for slogans. |
 | `CHARTS` | Optional. `0` turns off charts, which saves one model call. |
+
+Then create the tables the saved campaigns go in. It's safe to run again:
+
+```bash
+make migrate
+```
 
 ### Running
 
@@ -183,6 +189,7 @@ make frontend   # app on http://localhost:5173 (proxies /api to the backend)
 ```bash
 make test       # backend unit tests: no database or API key needed
 make lint       # every prek hook: ruff, sqlfluff, whitespace
+make migrate    # create the campaign tables in DATABASE_URL (safe to re-run)
 make build      # type-check and build the frontend
 ```
 

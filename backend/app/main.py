@@ -1,17 +1,20 @@
-"""The API: the network for the graph, and the agent's answers for the chat."""
+"""The API: the network for the graph, the agent's answers for the chat, and the campaigns the
+store team saves from them."""
 
 import asyncio
 import json
 import logging
 import os
 from collections.abc import AsyncIterator
+from datetime import date
 from typing import Annotated
 
-from fastapi import FastAPI, Query
-from fastapi.responses import StreamingResponse
+from fastapi import FastAPI, Query, Response
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from app.infra import data, progress
+from app import campaigns, products
+from app.infra import data, progress, store
 from app.roles.conversation import Turn
 from app.versions import v1, v2, v3
 
@@ -90,3 +93,47 @@ async def ask_stream(body: Question) -> StreamingResponse:
             task.cancel()  # the reader left: stop paying for a run nobody will see
 
     return StreamingResponse(lines(), media_type="application/x-ndjson")
+
+
+@app.get("/api/campaign-options")
+def campaign_options() -> dict:
+    """What the campaign wizard's segment and county fields offer."""
+    return {"segments": data.load_network()["segments"], "counties": store.load_counties()}
+
+
+@app.get("/api/products/search")
+def product_search(
+    q: str = "", limit: Annotated[int, Query(ge=1, le=50)] = 20
+) -> list[products.ProductHit]:
+    return products.search_products(q, limit)
+
+
+SAVE_FAILED = {"detail": "Could not save the campaign."}
+
+
+@app.post("/api/campaigns", response_model=campaigns.SavedCampaign)
+def save_campaign(draft: campaigns.CampaignDraft, response: Response):
+    """Checks a campaign against every rule and stores it: 201 when this call stored it, 200
+    with the stored one when its client_token was saved before. A broken rule is a 422 in
+    FastAPI's own shape, so the app marks its fields the same way as a malformed body."""
+    try:
+        catalog = data.load_catalog()
+        segments = data.load_network()["segments"]
+        counties = store.load_counties()
+    except Exception:
+        logging.exception("Could not read what a campaign is checked against")
+        return JSONResponse(status_code=500, content=SAVE_FAILED)
+    problems = campaigns.draft_problems(draft, catalog, segments, counties, date.today())
+    if problems:
+        detail = [
+            {"loc": ["body", *loc], "msg": msg, "type": "campaign_rule"} for loc, msg in problems
+        ]
+        return JSONResponse(status_code=422, content={"detail": detail})
+    try:
+        saved, created = store.save_campaign(draft)
+    except Exception:
+        logging.exception("Could not save the campaign %s", draft.client_token)
+        return JSONResponse(status_code=500, content=SAVE_FAILED)
+    if created:
+        response.status_code = 201
+    return saved
