@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState, type FormEvent } from "react"
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import { GenMark } from "../Brand"
+import { CampaignWizard } from "../campaign/CampaignWizard"
+import { Toast } from "../campaign/Toast"
 import type { Answer, Turn } from "../types"
 import { AnswerCard, Options } from "./AnswerCard"
 import { Progress } from "./Progress"
@@ -20,9 +22,27 @@ interface ChatProps {
   onReset: () => void
 }
 
-/** The conversation with the agent: suggestions when empty, then questions and answers, and the composer. */
+/** A proposal the wizard is open for: its answer, its position in it, and which opening this is. */
+interface Adding {
+  answer: Answer
+  index: number
+  opening: number
+}
+
+/**
+ * The conversation with the agent: suggestions when empty, then questions and answers, and the
+ * composer. It also turns proposals into campaigns: the wizard, the "Campaign saved" toast, and how
+ * many campaigns each proposal was saved as, for this page session.
+ */
 export function Chat({ turns, types, ignored, onIgnore, shown, onSend, onShow, onReset }: ChatProps) {
   const busy = turns.some((t) => !t.answer)
+  // Keyed by the answer itself, not its place in the list: a cleared conversation's new answers are
+  // new objects, so a proposal never shows "Saved ✓" for a campaign saved from an earlier one.
+  const [saved, setSaved] = useState<Map<Answer, number[]>>(() => new Map())
+  const [adding, setAdding] = useState<Adding | null>(null)
+  const openings = useRef(0)
+  const [toast, setToast] = useState<string | null>(null)
+  const hideToast = useCallback(() => setToast(null), [])
   const endRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" })
@@ -62,6 +82,8 @@ export function Chat({ turns, types, ignored, onIgnore, shown, onSend, onShow, o
                     shown={turn.answer === shown}
                     onShow={() => onShow(turn.answer!)}
                     onAsk={onSend}
+                    saved={saved.get(turn.answer) ?? []}
+                    onAddCampaign={(index) => setAdding({ answer: turn.answer!, index, opening: ++openings.current })}
                   />
                 ) : (
                   <Progress steps={turn.steps ?? []} />
@@ -75,6 +97,26 @@ export function Chat({ turns, types, ignored, onIgnore, shown, onSend, onShow, o
 
       <Ignored types={types} ignored={ignored} onIgnore={onIgnore} />
       <Composer onSend={onSend} busy={busy} />
+
+      {adding && (
+        <CampaignWizard
+          key={adding.opening}
+          proposal={adding.answer.strategy!.campaigns[adding.index]}
+          alreadySaved={saved.get(adding.answer)?.[adding.index] ?? 0}
+          onClose={() => setAdding(null)}
+          onSaved={() => {
+            const { answer, index } = adding
+            setSaved((before) => {
+              const counts = [...(before.get(answer) ?? [])]
+              counts[index] = (counts[index] ?? 0) + 1
+              return new Map(before).set(answer, counts)
+            })
+            setAdding(null)
+            setToast("Campaign saved")
+          }}
+        />
+      )}
+      <Toast message={toast} onDone={hideToast} />
     </section>
   )
 }

@@ -176,3 +176,69 @@ export interface Earlier {
   question: string
   answer: string
 }
+
+/* Campaigns the team saves (backend/app/campaigns.py). Dates are "YYYY-MM-DD". */
+
+/** A campaign covers whole product types (item_tag) or single products (item_name). */
+export type ProductKind = "type" | "product"
+
+/** An AI proposal as a campaign keeps it: the strategist's fields, without the writer's slogans. */
+export type Proposal = Omit<Campaign, "slogans">
+
+/** What a campaign draft holds for each of its products. */
+export interface ProductRef {
+  kind: ProductKind
+  name: string
+}
+
+/** A product search result. `type` is its product type: its own name for a type. */
+export interface ProductHit extends ProductRef {
+  type: string
+}
+
+/** What the wizard's segment and county fields offer. */
+export interface CampaignOptions {
+  segments: string[]
+  counties: string[]
+}
+
+/** A trial on part of the audience that must end before the campaign starts. */
+export interface PilotDraft {
+  /** Whole number, 1–99. */
+  audience_percent: number
+  starts_on: string
+  ends_on: string
+  /** Whole number, 1–100. */
+  discount_percent: number
+  /** Start the campaign when the pilot passes; false holds it for the team's approval. */
+  auto_start: boolean
+}
+
+/** A campaign as the wizard sends it. */
+export interface CampaignDraft {
+  /** The AI proposal it came from, as shown. `null`: not from one. */
+  source_proposal: Proposal | null
+  /** One per wizard opening, so a double click or a retry saves the campaign once. */
+  client_token: string
+  title: string
+  strategy: string
+  products: ProductRef[]
+  /** Whole number, 1–100. */
+  discount_percent: number
+  starts_on: string
+  ends_on: string
+  /** `null` for all customers. */
+  segment: string | null
+  /** Empty for all counties. */
+  counties: string[]
+  /** `null` for no pilot. */
+  pilot: PilotDraft | null
+}
+
+/** A stored campaign, as the API returns it. */
+export interface SavedCampaign extends Omit<CampaignDraft, "client_token"> {
+  id: string
+  status: "scheduled"
+  /** ISO timestamp. */
+  created_at: string
+}

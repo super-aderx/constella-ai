@@ -2,6 +2,9 @@ import type { Pair } from "./types"
 
 export const cn = (...classes: (string | false | null | undefined)[]) => classes.filter(Boolean).join(" ")
 
+/** A quiet rounded button: suggested questions, "Show on the graph", "Add as campaign". */
+export const chip = "cursor-pointer rounded-full bg-field px-3 py-1.5 text-left text-[13px] transition-colors hover:bg-line"
+
 const integer = new Intl.NumberFormat("en-US")
 
 /** Number formats: 1,902 · $48,210 · 3.10× */

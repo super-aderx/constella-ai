@@ -93,6 +93,8 @@ frontend (React 19 + Vite + Tailwind 4) ──/api──▶ backend (FastAPI) �
 - `src/graph/` renders the network and toolbar (period, segment, view, line width); `src/chat/`
   renders answers, citations, ledger, review verdict, charts and progress. The chat sends the
   graph's current filters, the user's ignored types and the recent turns with each question.
+- `src/campaign/` is the "Add as campaign" wizard opened from a proposal card. Its `validate.ts`
+  mirrors `app/campaigns.py`'s rules and messages: change them together.
 
 ## Conventions
 - Tests in `backend/tests/` must run without a database or API key: they build networks/ledgers
