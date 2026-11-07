@@ -43,9 +43,16 @@ export function CampaignWizard({ proposal, alreadySaved, onClose, onSaved }: Cam
   const [initial] = useState(() => fromProposal(proposal))
   const [draft, setDraft] = useState(initial)
   const [step, setStep] = useState<StepNumber>(1)
+  // The step checks' problems, and the server's. The server's are kept apart because Next cannot
+  // check them again (the catalog is only on the server): they stay, and stop Next, until their
+  // field is edited.
   const [errors, setErrors] = useState<FieldErrors>({})
+  const [serverErrors, setServerErrors] = useState<FieldErrors>({})
   const [saveError, setSaveError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  // A save that failed without saying why may have been stored all the same. Its token now stands
+  // for those values, so they are locked (no Back) until a retry of the same request gets an answer.
+  const [locked, setLocked] = useState(false)
   // State is too late to stop a double click: both clicks can run before a render.
   const saving = useRef(false)
   const [options, setOptions] = useState<CampaignOptions | null>(null)
@@ -72,7 +79,9 @@ export function CampaignWizard({ proposal, alreadySaved, onClose, onSaved }: Cam
   const change = (patch: Partial<WizardDraft>) => {
     const next = { ...draft, ...patch }
     setDraft(next)
-    setErrors(Object.fromEntries(Object.entries(errors).filter(([key]) => stillHolds(key, draft, next))))
+    const kept = (found: FieldErrors) => Object.fromEntries(Object.entries(found).filter(([key]) => stillHolds(key, draft, next)))
+    setErrors(kept(errors))
+    setServerErrors(kept(serverErrors))
   }
 
   const requestClose = () => {
@@ -83,17 +92,15 @@ export function CampaignWizard({ proposal, alreadySaved, onClose, onSaved }: Cam
 
   const goNext = () => {
     const found = stepErrors(step, draft, today())
-    // Only this step's problems are checked again: the server's problems on a later step stay to be seen there.
-    const later = Object.entries(errors).filter(([key]) => stepOf(key) !== step)
-    setErrors({ ...Object.fromEntries(later), ...found })
-    if (Object.keys(found).length === 0) setStep((step + 1) as StepNumber)
+    setErrors(found)
+    const unfixed = Object.keys(serverErrors).some((key) => stepOf(key) === step)
+    if (Object.keys(found).length === 0 && !unfixed) setStep((step + 1) as StepNumber)
   }
 
   const goBack = () => setStep((step - 1) as StepNumber)
 
-  /** Shows a set of problems: on the first step that has a field for one, and the rest on the review. */
+  /** Goes to the first step that has a field for one of the problems; problems no field shows are put on the review. */
   const showProblems = (found: FieldErrors, message: string) => {
-    setErrors(found)
     const keys = Object.keys(found)
     const steps = keys.map(stepOf).filter((n) => n !== null)
     const unplaced = keys.filter((key) => stepOf(key) === null).map((key) => found[key])
@@ -105,7 +112,10 @@ export function CampaignWizard({ proposal, alreadySaved, onClose, onSaved }: Cam
     if (saving.current) return
     if (alreadySaved > 0 && !window.confirm("You already saved a campaign from this proposal. Save another?")) return
     const found = stepErrors(3, draft, today())
-    if (Object.keys(found).length > 0) return showProblems(found, "")
+    if (Object.keys(found).length > 0) {
+      setErrors(found)
+      return showProblems(found, "")
+    }
     saving.current = true
     setPending(true)
     setSaveError(null)
@@ -116,10 +126,21 @@ export function CampaignWizard({ proposal, alreadySaved, onClose, onSaved }: Cam
       // The draft and its token are kept: a retry cannot store the campaign twice.
       saving.current = false
       setPending(false)
-      if (error instanceof CampaignError && error.fields) showProblems(error.fields, error.message)
-      else setSaveError(error instanceof Error ? error.message : String(error))
+      if (error instanceof CampaignError && error.fields) {
+        // A 422 stored nothing, so the values can be changed again.
+        setLocked(false)
+        setServerErrors(error.fields)
+        showProblems(error.fields, error.message)
+      } else {
+        setLocked(true)
+        const message = error instanceof Error ? error.message : String(error)
+        setSaveError(`${message} The values are locked because the last attempt may have been saved.`)
+      }
     }
   }
+
+  // The server's problem is shown over the step check's for the same field: it knows more.
+  const shown = { ...errors, ...serverErrors }
 
   const onBackdrop = (e: MouseEvent) => {
     if (e.target === dialog.current && pressed.current === dialog.current) requestClose()
@@ -166,14 +187,14 @@ export function CampaignWizard({ proposal, alreadySaved, onClose, onSaved }: Cam
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-          {step === 1 && <CampaignStep draft={draft} errors={errors} onChange={change} options={options} optionsFailed={optionsFailed} today={today()} />}
-          {step === 2 && <PilotStep draft={draft} errors={errors} onChange={change} />}
+          {step === 1 && <CampaignStep draft={draft} errors={shown} onChange={change} options={options} optionsFailed={optionsFailed} today={today()} />}
+          {step === 2 && <PilotStep draft={draft} errors={shown} onChange={change} />}
           {step === 3 && <ReviewStep draft={draft} error={saveError} />}
         </div>
 
         <footer className="flex items-center justify-end gap-2 border-t border-line px-6 py-4">
           {step > 1 && (
-            <button type="button" onClick={goBack} disabled={pending} className={cn(button, "mr-auto bg-field hover:bg-line")}>
+            <button type="button" onClick={goBack} disabled={pending || locked} className={cn(button, "mr-auto bg-field hover:bg-line disabled:opacity-50 disabled:hover:bg-field")}>
               Back
             </button>
           )}

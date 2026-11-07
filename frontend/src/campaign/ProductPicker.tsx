@@ -40,10 +40,11 @@ export function ProductPicker({ control, value, errors, onChange }: ProductPicke
       setSearch({ state: "idle" })
       return
     }
+    // The last query's hits go at once, not when the wait is over: Enter must never add one of them.
+    setSearch({ state: "searching" })
     // Each new query aborts the one before, so a slow answer to an old query never replaces a newer one.
     const aborter = new AbortController()
     const timer = setTimeout(() => {
-      setSearch({ state: "searching" })
       searchProducts(q, aborter.signal).then(
         (hits) => {
           setSearch({ state: "done", hits })
@@ -61,6 +62,11 @@ export function ProductPicker({ control, value, errors, onChange }: ProductPicke
   // Hits already chosen are left out: adding one twice is never what is meant.
   const hits = search.state === "done" ? search.hits.filter((hit) => !value.some((chosen) => same(chosen, hit))) : []
   const listed = open && q !== "" && search.state !== "idle"
+
+  // The input keeps the focus, so the list does not scroll by itself to the hit the arrows pick.
+  useEffect(() => {
+    if (listed) document.getElementById(`${listId}-${active}`)?.scrollIntoView({ block: "nearest" })
+  }, [listed, listId, active, hits.length])
 
   const add = (hit: ProductHit) => {
     onChange([...value, { kind: hit.kind, name: hit.name }])
