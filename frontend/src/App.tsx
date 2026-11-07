@@ -11,12 +11,16 @@ import type { Answer, Filters, Metric, Mode, Network, Step, Turn } from "./types
 /** Earlier turns sent with a question: enough for a follow-up, few enough to keep a run cheap. */
 const HISTORY = 3
 
-/** An answer as the agent reads it in a follow-up: its text, and the campaigns it offered. */
+/**
+ * An answer as the agent reads it in a follow-up: its text, the choices it offered, numbered so
+ * "the first one" can be resolved, and the campaigns it offered.
+ */
 function said(answer: Answer): string {
+  const options = (answer.options ?? []).map((o, i) => `${i + 1}. ${o}`)
   const campaigns = (answer.strategy?.campaigns ?? []).map(
     (c) => `${c.name}: ${c.items.join(" + ")}, ${c.discount_percent}% off, for ${c.audience ?? "all customers"}`,
   )
-  return [answer.text, answer.strategy?.text, ...campaigns].filter(Boolean).join("\n")
+  return [answer.text, ...options, answer.strategy?.text, ...campaigns].filter(Boolean).join("\n")
 }
 
 const same = (a: Filters, b: Filters) => a.days === b.days && a.segment === b.segment
