@@ -8,6 +8,17 @@ import { PERIODS, Toolbar } from "./graph/Toolbar"
 import { cn, pairKey, partnersOf } from "./lib"
 import type { Answer, Filters, Metric, Mode, Network, Step, Turn } from "./types"
 
+/** Earlier turns sent with a question: enough for a follow-up, few enough to keep a run cheap. */
+const HISTORY = 3
+
+/** An answer as the agent reads it in a follow-up: its text, and the campaigns it offered. */
+function said(answer: Answer): string {
+  const campaigns = (answer.strategy?.campaigns ?? []).map(
+    (c) => `${c.name}: ${c.items.join(" + ")}, ${c.discount_percent}% off, for ${c.audience ?? "all customers"}`,
+  )
+  return [answer.text, answer.strategy?.text, ...campaigns].filter(Boolean).join("\n")
+}
+
 const same = (a: Filters, b: Filters) => a.days === b.days && a.segment === b.segment
 
 /** A scope in words: "Last 90 days, 忠誠客戶". */
@@ -161,10 +172,20 @@ export default function App() {
         return last && !last.answer ? [...t.slice(0, -1), { ...last, steps: [...(last.steps ?? []), step] }] : t
       })
     }
-    const answer = await ask(question, asked, ignored, step).catch((error: Error) => ({ text: error.message, items: [], pairs: [] }))
+    // The turns before it, so a follow-up ("and new customers?") can be read. A filter chosen by hand
+    // clears them, so they are always about what is on screen.
+    const history = turns
+      .filter((t) => t.answer && !t.failed)
+      .slice(-HISTORY)
+      .map((t) => ({ question: t.question, answer: said(t.answer!) }))
+    let failed = false
+    const answer = await ask(question, asked, ignored, history, step).catch((error: Error) => {
+      failed = true
+      return { text: error.message, items: [], pairs: [] }
+    })
     // The filters changed while it was waiting: the answer is about a network no longer shown.
     if (chosen.current !== asked) return
-    setTurns((t) => [...t.slice(0, -1), { question, answer }])
+    setTurns((t) => [...t.slice(0, -1), { question, answer, failed }])
     show(answer)
   }
 

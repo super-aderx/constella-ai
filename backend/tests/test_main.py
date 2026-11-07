@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.infra import data, progress
-from app.main import app
+from app.main import MAX_TURNS, app
 from app.versions import v1 as agent
 from app.versions import v2 as agent_v2
 from app.versions import v3 as agent_v3
@@ -23,7 +23,7 @@ def seen(monkeypatch: pytest.MonkeyPatch) -> list:
         calls.append((days, segment))
         return {"items": [], "pairs": [], "communities": [], "segments": []}
 
-    async def ask(question, days, segment, ignored=()):
+    async def ask(question, days, segment, ignored=(), history=()):
         calls.append((days, segment, *ignored))
         return agent.Answer(text="ok", items=[], pairs=[])
 
@@ -66,7 +66,7 @@ def lines(response) -> list[dict]:
 
 
 def test_the_stream_sends_each_step_then_the_answer(monkeypatch: pytest.MonkeyPatch):
-    async def ask(question, days, segment, ignored=()):
+    async def ask(question, days, segment, ignored=(), history=()):
         progress.step("router")
         progress.step("tool", id="L1", tool="top_items", args={"limit": 5})
         return agent.Answer(text="ok", items=[], pairs=[])
@@ -81,7 +81,7 @@ def test_the_stream_sends_each_step_then_the_answer(monkeypatch: pytest.MonkeyPa
 
 
 def test_the_stream_ends_with_an_error_when_the_agent_fails(monkeypatch: pytest.MonkeyPatch):
-    async def ask(question, days, segment, ignored=()):
+    async def ask(question, days, segment, ignored=(), history=()):
         progress.step("router")
         raise RuntimeError("no model")
 
@@ -99,3 +99,25 @@ def test_the_stream_rejects_a_filter_that_would_read_as_none(seen: list):
 def test_ask_passes_on_the_types_set_aside(path: str, seen: list):
     assert client.post(path, json={"question": "x", "ignored": ["啤酒"]}).status_code == 200
     assert seen == [(None, None, "啤酒")]
+
+
+@pytest.mark.parametrize("path", ["/api/ask", "/api/ask/stream"])
+def test_ask_passes_on_the_conversation_so_far(path: str, monkeypatch: pytest.MonkeyPatch):
+    given = []
+
+    async def ask(question, days, segment, ignored=(), history=()):
+        given.append(history)
+        return agent.Answer(text="ok", items=[], pairs=[])
+
+    monkeypatch.setattr(agent_v3, "ask", ask)
+    earlier = [{"question": "忠誠客戶買吐司時還買什麼？", "answer": "最常一起買的是鮮乳。"}]
+    body = {"question": "那新客戶呢？", "history": earlier}
+    assert client.post(path, json=body).status_code == 200
+    assert client.post(path, json={"question": "x"}).status_code == 200
+    assert [[turn.model_dump() for turn in history] for history in given] == [earlier, []]
+
+
+def test_ask_rejects_a_conversation_past_the_cap(seen: list):
+    history = [{"question": "q", "answer": "a"}] * (MAX_TURNS + 1)
+    assert client.post("/api/ask", json={"question": "x", "history": history}).status_code == 422
+    assert seen == []

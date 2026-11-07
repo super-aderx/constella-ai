@@ -167,4 +167,12 @@ export interface Turn {
   question: string
   steps?: Step[]
   answer?: Answer
+  /** The request failed: the answer is the error, which a follow-up should not be read against. */
+  failed?: boolean
+}
+
+/** An earlier turn as the agent reads it for a follow-up: the question, and what the user was told. */
+export interface Earlier {
+  question: string
+  answer: string
 }

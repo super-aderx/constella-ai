@@ -8,6 +8,7 @@ import os
 from collections.abc import Sequence
 
 from app.roles.analyst import Reply, Review, analyse
+from app.roles.conversation import Turn
 from app.roles.scientist import Chart, draw
 from app.tools import Run
 
@@ -32,8 +33,13 @@ async def chart_for(question: str, reply: Reply, run: Run, verdict: Review) -> C
 
 
 async def ask(
-    question: str, days: int | None, segment: str | None, ignored: Sequence[str] = ()
+    question: str,
+    days: int | None,
+    segment: str | None,
+    ignored: Sequence[str] = (),
+    history: Sequence[Turn] = (),
 ) -> Answer:
+    # `history` is taken and not read: each question stands alone, as it did when v2 was scored.
     reply, run, verdict = await analyse(question, days, segment, ignored=ignored)
     chart = await chart_for(question, reply, run, verdict)
     return Answer(**reply.model_dump(), ledger=run.ledger, review=verdict, chart=chart)

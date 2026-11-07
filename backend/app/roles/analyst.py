@@ -16,6 +16,7 @@ from pydantic import BaseModel
 
 from app.infra import progress
 from app.infra.data import load_network
+from app.roles.conversation import Turn, messages
 from app.roles.reviewer import review
 from app.tools import TOOLS, Run
 
@@ -131,6 +132,13 @@ the user sees the strategist's part right below yours.
 """
 
 
+EARLIER = """
+Earlier turns of this conversation come before the question. Use them to tell what a follow-up
+means ("and new customers?", "that pair"). Their answers came from tool calls this run does not
+have: look up again every figure you state, even one an earlier answer gave.
+"""
+
+
 IGNORED = """
 The user has set these product types aside: {ignored}. Answer a question of fact about them as
 usual. But never recommend one or build an offer on one, and when the user wants something to
@@ -144,10 +152,12 @@ async def analyse(
     segment: str | None,
     handoff: bool = False,
     ignored: Sequence[str] = (),
+    history: Sequence[Turn] = (),
 ) -> tuple[Reply, Run, Review]:
     """The analyst's reviewed reply to a question, with the run it came from. With `handoff`,
     it reports findings for the strategist instead of answering a request for a campaign.
-    `ignored` are the product types the user wants no campaign built on."""
+    `ignored` are the product types the user wants no campaign built on, and `history` the
+    conversation before the question."""
     # load_network reads the database synchronously: in a worker thread, like v1's.
     network = await asyncio.to_thread(load_network, days, segment)
     instructions = RULES.format(
@@ -159,6 +169,8 @@ async def analyse(
         instructions += HANDOFF
     if ignored:
         instructions += IGNORED.format(ignored=", ".join(ignored))
+    if history:
+        instructions += EARLIER
     agent = Agent[Run](
         name="Constella AI v2",
         instructions=instructions,
@@ -177,11 +189,12 @@ async def analyse(
         # is not loaded.
         views = [v for v in reply.views[:2] if v.segment in (None, *run.segments)]
         shown = [await asyncio.to_thread(load_network, v.days, v.segment) for v in views]
-        # The reviewer may take numbers from the question and from the scope the agent was told.
+        # The reviewer may take numbers from the question and from the scope the agent was told,
+        # never from an earlier answer: those were checked against another run's ledger.
         return review(reply.model_dump(), run.ledger, shown, f"{question}\n{instructions}")
 
     progress.step("analyst")
-    result = await Runner.run(agent, question, context=run)
+    result = await Runner.run(agent, messages(question, history), context=run)
     reply: Reply = result.final_output
     progress.step("review")
     caught = notes = await check(reply)

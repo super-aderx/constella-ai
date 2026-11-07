@@ -20,6 +20,7 @@ from pydantic import BaseModel
 from app.infra import progress
 from app.infra.data import load_network
 from app.roles.analyst import Figure, Reply
+from app.roles.conversation import Turn
 from app.roles.reviewer import review
 from app.tools import TOOLS, Run
 
@@ -56,6 +57,12 @@ Each campaign:
 `text`: two to four sentences in the user's language: what the options are and how they differ.
 There is no cost or margin data, so say once that the discounts are not checked against margin.
 `figures`: every figure in `text` and in each `reason`, each with the ledger id it is from.
+"""
+
+EARLIER = """
+`earlier` is the conversation before this question: what the user asked and was offered. A
+follow-up such as "a smaller discount" or "not for new customers" changes those campaigns. Their
+figures came from another run: state only figures from this run's ledger.
 """
 
 SET_ASIDE = """
@@ -141,9 +148,11 @@ def strategy_problems(
     return problems
 
 
-async def draft(question: str, reply: Reply, run: Run) -> tuple[Strategy, list[str], list[str]]:
+async def draft(
+    question: str, reply: Reply, run: Run, history: Sequence[Turn] = ()
+) -> tuple[Strategy, list[str], list[str]]:
     """Campaign options for a reviewed reply: the strategy, what the reviewer caught first, and
-    what is still wrong after the one retry."""
+    what is still wrong after the one retry. `history` is the conversation before the question."""
     # One graph per view: two for a comparison, and a campaign may build on either side.
     networks = list(
         await asyncio.gather(
@@ -159,6 +168,8 @@ async def draft(question: str, reply: Reply, run: Run) -> tuple[Strategy, list[s
     )
     if run.ignored:
         instructions += SET_ASIDE.format(ignored=", ".join(run.ignored))
+    if history:
+        instructions += EARLIER
     agent = Agent[Run](
         name="Constella AI strategist",
         instructions=instructions,
@@ -185,6 +196,8 @@ async def draft(question: str, reply: Reply, run: Run) -> tuple[Strategy, list[s
         return problems + review(claims, run.ledger, networks, context)
 
     brief = {"question": question, "analyst_answer": reply.text, "ledger": run.ledger}
+    if history:
+        brief["earlier"] = [turn.model_dump() for turn in history]
     progress.step("strategist")
     result = await Runner.run(agent, json.dumps(brief, ensure_ascii=False), context=run)
     strategy: Strategy = result.final_output
