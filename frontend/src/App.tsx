@@ -1,6 +1,7 @@
 import { use, useCallback, useDeferredValue, useMemo, useRef, useState, type CSSProperties } from "react"
 import { ask, getNetwork } from "./api"
 import { Logo } from "./Brand"
+import { Brief } from "./brief/Brief"
 import { CampaignList, type CampaignChange } from "./campaign/CampaignList"
 import { CampaignWizard, type WizardMode } from "./campaign/CampaignWizard"
 import { changedMessage } from "./campaign/status"
@@ -229,6 +230,18 @@ export default function App() {
     show(answer)
   }
 
+  /** A question is waiting for its answer: only the last turn can be. */
+  const chatBusy = turns.some((t) => !t.answer)
+
+  // A Brief card carried into the chat: its question and answer become the latest turn, so the next
+  // question is read as a follow-up to it. Not while a question waits, as `send` answers the last turn.
+  const continueInChat = (question: string, answer: Answer) => {
+    if (chatBusy) return
+    setTurns((t) => [...t, { question, answer }])
+    setTab("chat")
+    show(answer)
+  }
+
   const select = (item: string | null) => {
     if (item) setSelected(item === selected ? null : item)
     else {
@@ -351,8 +364,20 @@ export default function App() {
               />
             ),
             campaigns: <CampaignList active={tab === "campaigns"} version={campaignsVersion} onEdit={editCampaign} onChanged={campaignsChanged} onToast={setToast} />,
-            // The Brief tab's cards go here (CAI-14).
-            brief: <p className="px-1 pt-2 text-ink-muted">The brief is coming soon.</p>,
+            brief: (
+              <Brief
+                filters={filters}
+                label={scopeLabel(filters)}
+                ignored={ignored}
+                shown={selected ? null : shown}
+                chatBusy={chatBusy}
+                savedProposals={savedProposals}
+                onShow={show}
+                onContinue={continueInChat}
+                onAddCampaign={openWizard}
+                onToast={setToast}
+              />
+            ),
           }}
         />
       </div>

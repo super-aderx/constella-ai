@@ -257,3 +257,42 @@ export interface SavedCampaign extends Omit<CampaignDraft, "client_token"> {
   ended_at: string | null
   cancelled_at: string | null
 }
+
+/* The Brief (backend/app/depict.py): 8 standard questions answered on the server for each scope. */
+
+/** The Brief's questions, in their order on screen (the titles come from the server). */
+export type CardKey =
+  | "unrealized_combos"
+  | "best_pairs"
+  | "worst_pairs"
+  | "bestseller_causes"
+  | "community_key_items"
+  | "cross_community"
+  | "in_community_combos"
+  | "bridge_removal"
+
+/** "no_data": the scope has nothing for the question to rank or compare, so no model was asked. */
+export type CardState = "waiting" | "answering" | "answered" | "no_data" | "failed"
+
+/** One question of the Brief and where its answer is. */
+export interface DepictCard {
+  key: CardKey
+  /** The question, in Chinese. */
+  title: string
+  state: CardState
+  /** Set once answered. A refresh keeps the old one while the new one is being answered. */
+  answer: Answer | null
+  /** Why there is not enough data, when "no_data". */
+  reason: string | null
+  /** What went wrong, when "failed". */
+  error: string | null
+  /** ISO timestamp. */
+  answered_at: string | null
+}
+
+/** A scope's Brief: always 8 cards, in the order of the questions. */
+export interface Depict {
+  days: number | null
+  segment: string | null
+  cards: DepictCard[]
+}

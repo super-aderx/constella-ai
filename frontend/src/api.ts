@@ -1,5 +1,5 @@
 import type { FieldErrors } from "./campaign/draft"
-import type { Answer, CampaignAction, CampaignDraft, CampaignOptions, CampaignStatus, Earlier, Filters, Network, ProductHit, SavedCampaign, Step } from "./types"
+import type { Answer, CampaignAction, CampaignDraft, CampaignOptions, CampaignStatus, CardKey, Depict, DepictCard, Earlier, Filters, Network, ProductHit, SavedCampaign, Step } from "./types"
 
 /** The backend's endpoints. Vite proxies /api to it (see vite.config.ts). */
 
@@ -9,14 +9,19 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json()
 }
 
-const networks = new Map<string, Promise<Network>>()
-
-/** The network for one filter. Each filter is fetched once, so the same promise can be read on every render. */
-export function getNetwork({ days, segment }: Filters) {
+/** A scope as query parameters: only what is set, so "all time" and "all customers" are left out. */
+function scopeQuery({ days, segment }: Filters) {
   const query = new URLSearchParams()
   if (days) query.set("days", String(days))
   if (segment) query.set("segment", segment)
-  const path = `/network?${query}`
+  return query
+}
+
+const networks = new Map<string, Promise<Network>>()
+
+/** The network for one filter. Each filter is fetched once, so the same promise can be read on every render. */
+export function getNetwork(filters: Filters) {
+  const path = `/network?${scopeQuery(filters)}`
   if (!networks.has(path)) networks.set(path, request<Network>(path))
   return networks.get(path)!
 }
@@ -46,6 +51,40 @@ export async function ask(question: string, filters: Filters, ignored: string[],
     }
   }
   throw new Error("The answer was cut off before it arrived. Is the backend running?")
+}
+
+/**
+ * Starts the Brief for a scope, unless the server has already started it (for anyone): calling it
+ * again is harmless. The cards come back as they are now.
+ */
+export function startDepict(filters: Filters) {
+  return request<Depict>(`/depict?${scopeQuery(filters)}`, { method: "POST" })
+}
+
+/** The Brief's cards for a scope, as they are now. Read only: it never starts anything. */
+export function getDepict(filters: Filters) {
+  return request<Depict>(`/depict?${scopeQuery(filters)}`)
+}
+
+/** The card was already waiting or being answered, so it was not run again. The server sends it as it is. */
+export class DepictBusy extends Error {
+  card: DepictCard | null
+  constructor(card: DepictCard | null) {
+    super("This card is already being answered.")
+    this.card = card
+  }
+}
+
+/** Answers one card of the Brief again, for everyone. The card comes back answering, with its old answer kept. */
+export async function refreshCard(filters: Filters, key: CardKey): Promise<DepictCard> {
+  const path = `/depict/cards/${encodeURIComponent(key)}/refresh?${scopeQuery(filters)}`
+  const response = await fetch(`/api${path}`, { method: "POST" })
+  if (response.status === 409) {
+    const body: { card?: DepictCard } | null = await response.json().catch(() => null)
+    throw new DepictBusy(body?.card ?? null)
+  }
+  if (!response.ok) throw new Error(`The API answered ${response.status} for ${path}. Is the backend running?`)
+  return response.json()
 }
 
 let campaignOptions: Promise<CampaignOptions> | null = null
