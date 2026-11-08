@@ -1,12 +1,12 @@
 import type { Answer } from "../types"
 
-/** Where to start: one question for each thing the assistant can do. */
+/** Where to start: one question for each thing the assistant can do, in Chinese, as the users work. */
 export const STARTERS = [
-  "What are the top 5 product types by revenue?",
-  "Which two product types are bought together most often?",
-  "Which groups of product types exist?",
-  "Which combinations have potential to grow?",
-  "Suggest a campaign for the pair with the highest lift",
+  "依營收排名前 5 的商品類型是哪些？",
+  "哪兩種商品類型最常被一起購買？",
+  "有哪些商品類型分組？",
+  "哪些組合有成長潛力？",
+  "為提升度最高的組合推薦一個行銷活動",
 ]
 
 /**
@@ -24,16 +24,16 @@ export function nextSteps(answer: Answer, asked: string, ignored: string[]): str
   // The campaign is last: with campaigns already drafted, the next step is not another one.
   const steps = pair
     ? [
-        `What else is bought with ${pair.a}?`,
-        `Which sets of three product types include ${pair.a}?`,
-        `Which combinations with ${pair.a} have potential to grow?`,
-        `Suggest a campaign for ${pair.a} and ${pair.b}`,
+        `還有哪些商品類型常與 ${pair.a} 一起購買？`,
+        `哪些三種商品類型的組合包含 ${pair.a}？`,
+        `哪些包含 ${pair.a} 的組合有成長潛力？`,
+        `為 ${pair.a} 和 ${pair.b} 推薦一個行銷活動`,
       ]
     : [
-        `What is bought with ${item} most often?`,
-        `Which products sell best in ${item}?`,
-        `Which combinations with ${item} have potential to grow?`,
-        `Suggest a campaign around ${item}`,
+        `哪些商品類型最常與 ${item} 一起購買？`,
+        `${item} 中哪些商品賣得最好？`,
+        `哪些包含 ${item} 的組合有成長潛力？`,
+        `針對 ${item} 推薦一個行銷活動`,
       ]
   // Nor the question just asked.
   return (answer.strategy ? steps.slice(0, -1) : steps).filter((question) => question !== asked).slice(0, 3)

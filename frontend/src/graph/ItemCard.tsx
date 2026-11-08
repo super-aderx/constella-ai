@@ -7,14 +7,15 @@ interface ItemCardProps {
   /** The selected product type's name. */
   name: string
   onSelect: (item: string | null) => void
-  onAsk: (question: string) => void
+  /** Adds a question about the type to the chat's input, to edit and send there. */
+  onDraft: (text: string) => void
   /** Whether the user has set this type aside: the assistant builds no campaign on it. */
   ignored: boolean
   onIgnore: () => void
 }
 
-/** The selected product type: its figures, its top products, its strongest partners, a way to ask about it, and a way to keep it out of campaigns. */
-export function ItemCard({ network, name, onSelect, onAsk, ignored, onIgnore }: ItemCardProps) {
+/** The selected product type: its figures, its top products, its strongest partners, a question about it to start from, and a way to keep it out of campaigns. */
+export function ItemCard({ network, name, onSelect, onDraft, ignored, onIgnore }: ItemCardProps) {
   const item = network.items.find((i) => i.name === name)!
   const partners = partnersOf(network.pairs, name).slice(0, 4)
   return (
@@ -59,7 +60,7 @@ export function ItemCard({ network, name, onSelect, onAsk, ignored, onIgnore }: 
         </ul>
       </section>
 
-      <button type="button" onClick={() => onAsk(`What sells with ${item.name}?`)} className="h-9 cursor-pointer rounded-lg bg-action font-semibold text-on-action">
+      <button type="button" onClick={() => onDraft(`哪些商品類型常與 ${item.name} 一起購買？`)} className="h-9 cursor-pointer rounded-lg bg-action font-semibold text-on-action">
         Ask about it
       </button>
       {/* The graph keeps the type either way: this only tells the assistant not to build a campaign on it. */}
