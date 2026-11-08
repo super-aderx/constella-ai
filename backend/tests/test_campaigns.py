@@ -1,11 +1,19 @@
 """The campaign rules, on a sound draft and on drafts with a planted fault, checked without a
 database or a model."""
 
-from datetime import date
+from datetime import UTC, date, datetime
 
 import pytest
 
-from app.campaigns import CampaignDraft, draft_problems
+from app.campaigns import (
+    ACTIONS,
+    CampaignDraft,
+    Pilot,
+    action_problem,
+    draft_problems,
+    status_of,
+    store_today,
+)
 
 CATALOG = {"teapot": ["blue teapot"], "cups": ["tea cup", "blue tea cup"]}
 SEGMENTS = ["Champions", "Loyal"]
@@ -80,6 +88,7 @@ def test_every_problem_is_reported_in_rule_order():
     [
         ({"title": " \n"}, (("title",), "Required.")),
         ({"strategy": ""}, (("strategy",), "Required.")),
+        ({"slogan": "x" * 101}, (("slogan",), "At most 100 characters.")),
         ({"products": []}, (("products",), "Add at least one product.")),
         (
             {"products": [{"kind": "type", "name": "teapot"}, {"kind": "type", "name": "mugs"}]},
@@ -124,6 +133,7 @@ def test_every_problem_is_reported_in_rule_order():
     ids=[
         "1-title",
         "2-strategy",
+        "2-slogan-too-long",
         "3-no-products",
         "4-unknown-type",
         "4-product-as-type",
@@ -150,3 +160,120 @@ def test_the_proposal_is_not_checked():
     # It records what the AI proposed, not what will run: a type off the catalog is fine there.
     proposal = {**draft().source_proposal.model_dump(), "items": ["nothing we sell"]}
     assert problems(draft(source_proposal=proposal)) == []
+
+
+@pytest.mark.parametrize(
+    ("given", "expected"),
+    [("  Tea for two  ", "Tea for two"), ("   ", None), ("", None), (None, None)],
+)
+def test_slogan_is_stripped_and_empty_is_none(given, expected):
+    assert draft(slogan=given).slogan == expected
+
+
+def test_a_slogan_of_100_characters_is_fine():
+    assert problems(draft(slogan="x" * 100)) == []
+
+
+# A campaign from 2026-12-10 to 2026-12-24, with a pilot from 2026-12-01 to 2026-12-07.
+STARTS_ON, ENDS_ON = date(2026, 12, 10), date(2026, 12, 24)
+HOLD = Pilot(
+    audience_percent=10,
+    starts_on=date(2026, 12, 1),
+    ends_on=date(2026, 12, 7),
+    discount_percent=10,
+    auto_start=False,
+)
+AUTO = HOLD.model_copy(update={"auto_start": True})
+AT = datetime(2026, 12, 2, 9, 0, tzinfo=UTC)
+
+
+def status(today: str, *, stored="launched", pilot=HOLD, approved=None, ended=None, cancelled=None):
+    return status_of(
+        stored=stored,
+        starts_on=STARTS_ON,
+        ends_on=ENDS_ON,
+        pilot=pilot,
+        approved_at=approved,
+        ended_at=ended,
+        cancelled_at=cancelled,
+        today=date.fromisoformat(today),
+    )
+
+
+@pytest.mark.parametrize(
+    ("today", "facts", "expected"),
+    [
+        ("2026-11-08", {"stored": "draft"}, "draft"),
+        ("2027-01-01", {"stored": "draft"}, "draft"),
+        ("2026-12-03", {"cancelled": AT}, "cancelled"),
+        ("2026-12-03", {"cancelled": AT, "ended": AT}, "cancelled"),
+        ("2026-12-03", {"ended": AT}, "ended"),
+        ("2026-12-25", {"pilot": None}, "ended"),
+        ("2026-12-25", {}, "ended"),
+        ("2026-11-30", {}, "scheduled"),
+        ("2026-12-01", {}, "piloting"),
+        ("2026-12-07", {}, "piloting"),
+        ("2026-12-08", {}, "awaiting_approval"),
+        ("2026-12-24", {}, "awaiting_approval"),
+        ("2026-12-08", {"approved": AT}, "scheduled"),
+        ("2026-12-10", {"approved": AT}, "running"),
+        ("2026-12-08", {"pilot": AUTO}, "scheduled"),
+        ("2026-12-12", {"pilot": AUTO}, "running"),
+        ("2026-12-09", {"pilot": None}, "scheduled"),
+        ("2026-12-10", {"pilot": None}, "running"),
+        ("2026-12-24", {"pilot": None}, "running"),
+    ],
+    ids=[
+        "draft",
+        "draft-with-past-dates",
+        "cancelled",
+        "cancelled-wins-over-ended",
+        "ended-early",
+        "no-pilot-past-end",
+        "hold-never-approved-past-end",
+        "pilot-not-started",
+        "pilot-first-day",
+        "pilot-last-day",
+        "hold-awaiting-approval",
+        "hold-awaiting-on-last-campaign-day",
+        "hold-approved-before-start",
+        "hold-approved-running",
+        "auto-start-before-start",
+        "auto-start-running",
+        "no-pilot-before-start",
+        "no-pilot-first-day",
+        "no-pilot-last-day",
+    ],
+)
+def test_status_of(today: str, facts: dict, expected: str):
+    assert status(today, **facts) == expected
+
+
+def test_actions_follow_the_status_table():
+    assert {
+        "launch": {"draft"},
+        "approve": {"awaiting_approval"},
+        "end": {"piloting", "running"},
+        "cancel": {"scheduled", "piloting", "awaiting_approval", "running"},
+    } == ACTIONS
+    allowed = set().union(*ACTIONS.values())
+    assert "ended" not in allowed
+    assert "cancelled" not in allowed
+
+
+@pytest.mark.parametrize(
+    ("action", "ends_on", "expected"),
+    [
+        ("launch", "2026-11-07", "The end date has passed."),
+        ("launch", "2026-11-08", None),
+        ("launch", "2026-12-24", None),
+        ("cancel", "2026-11-07", None),
+    ],
+)
+def test_action_problem(action: str, ends_on: str, expected):
+    today = date(2026, 11, 8)
+    assert action_problem(action, "draft", date.fromisoformat(ends_on), today) == expected
+
+
+def test_store_today_is_a_date():
+    assert isinstance(store_today(), date)
