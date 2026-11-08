@@ -62,10 +62,20 @@ function days(from: string, to: string) {
  * to chart yet. So the trend starts on the first day the pilot or the campaign actually ran.
  */
 export function trendRange(campaign: SavedCampaign, now = new Date()): { from: string; to: string } | null {
-  const { status, launched_at, pilot } = campaign
+  const { status, launched_at, approved_at, pilot } = campaign
   if (status === "draft" || status === "scheduled" || launched_at === null) return null
   const launched = today(new Date(launched_at))
-  const began = pilot ? pilot.starts_on : campaign.starts_on
+  let began = pilot ? pilot.starts_on : campaign.starts_on
+  // A pilot already over at launch never ran, so the campaign itself is the first thing live. One
+  // held for approval starts once approved, not before its start date, and never if not approved.
+  if (pilot && launched > pilot.ends_on) {
+    began = campaign.starts_on
+    if (!pilot.auto_start) {
+      if (approved_at === null) return null
+      const approved = today(new Date(approved_at))
+      if (approved > began) began = approved
+    }
+  }
   const from = launched > began ? launched : began
   let to: string
   if (status === "ended") to = campaign.ended_at ? today(new Date(campaign.ended_at)) : campaign.ends_on

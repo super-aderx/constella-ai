@@ -1,7 +1,24 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from "react"
 import { cn } from "../lib"
 import type { SavedCampaign } from "../types"
+import { today } from "./draft"
 import { fetchCampaignTrend, shortDate, summarize, TREND_METRICS, type TrendMetric, type TrendPoint } from "./trend"
+
+/**
+ * The local date, moved on at midnight. The panel stays mounted when the user looks elsewhere, so a
+ * running campaign left open overnight would otherwise keep ending its chart on yesterday.
+ */
+function useToday() {
+  const [day, setDay] = useState(() => today())
+  useEffect(() => {
+    const now = new Date()
+    // A second past midnight, so a timer that fires a touch early still lands on the new day.
+    const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 1)
+    const timer = setTimeout(() => setDay(today()), next.getTime() - now.getTime())
+    return () => clearTimeout(timer)
+  }, [day])
+  return day
+}
 
 /**
  * How a live or finished campaign has done, day by day, in one metric at a time. Nothing is shown
@@ -12,10 +29,12 @@ export function CampaignTrend({ campaign }: { campaign: SavedCampaign }) {
   const [points, setPoints] = useState<TrendPoint[] | null>(null)
   const [metric, setMetric] = useState<TrendMetric>("revenue")
   const id = useId()
-  const { id: campaignId, status, launched_at, ended_at, cancelled_at, starts_on, ends_on } = campaign
-  const pilotStart = campaign.pilot?.starts_on
+  const { id: campaignId, status, launched_at, approved_at, ended_at, cancelled_at, starts_on, ends_on } = campaign
+  const { starts_on: pilotStart, ends_on: pilotEnd, auto_start: autoStart } = campaign.pilot ?? {}
+  const day = useToday()
 
-  // Only what decides the range: a change elsewhere in the campaign keeps the chart as it is.
+  // Only what decides the range: a change elsewhere in the campaign keeps the chart as it is. The
+  // fetch reads today itself; `day` is here so a running campaign gains its new day at midnight.
   useEffect(() => {
     let live = true
     setPoints(null)
@@ -27,7 +46,7 @@ export function CampaignTrend({ campaign }: { campaign: SavedCampaign }) {
     return () => {
       live = false
     }
-  }, [campaignId, status, launched_at, ended_at, cancelled_at, starts_on, ends_on, pilotStart])
+  }, [campaignId, status, launched_at, approved_at, ended_at, cancelled_at, starts_on, ends_on, pilotStart, pilotEnd, autoStart, day])
 
   if (!points || points.length === 0) return null
   const shown = TREND_METRICS.find((m) => m.key === metric)!
@@ -98,7 +117,7 @@ function LineChart({ points, metric }: { points: TrendPoint[]; metric: TrendMetr
   const ref = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
   const [hover, setHover] = useState<number | null>(null)
-  const { label, format } = TREND_METRICS.find((m) => m.key === metric)!
+  const { label, format, summary } = TREND_METRICS.find((m) => m.key === metric)!
 
   useLayoutEffect(() => {
     const el = ref.current!
@@ -111,7 +130,10 @@ function LineChart({ points, metric }: { points: TrendPoint[]; metric: TrendMetr
 
   const values = points.map((p) => p[metric])
   // Three steps from zero to at least the highest day; all-zero days still get a scale.
-  const step = niceStep((Math.max(...values) || 1) / 3)
+  const nice = niceStep((Math.max(...values) || 1) / 3)
+  // Counts and money are labelled in whole units: a 0.4 or 2.5 step would print 0, 0, 1, 1 or
+  // 0, 3, 5, 8 at evenly spaced heights. Only the averaged rate keeps a fractional step.
+  const step = summary === "mean" ? nice : Math.ceil(nice)
   const top = step * 3
   const plotW = Math.max(width - PAD.left - PAD.right, 0)
   const plotH = HEIGHT - PAD.top - PAD.bottom
@@ -134,12 +156,30 @@ function LineChart({ points, metric }: { points: TrendPoint[]; metric: TrendMetr
   return (
     // The height is held while the width is unknown (a hidden tab), so nothing jumps when it is drawn.
     <div ref={ref} className="mt-1 w-full" style={{ height: HEIGHT }}>
+      {/* The hover readout needs a pointer: keyboard and screen-reader users get the same days and
+          values as a table, and the drawing is hidden from them so it is not read twice. */}
+      <table className="sr-only">
+        <caption>{`${label} per day, ${first}${points.length > 1 ? ` to ${last}` : ""}. Sample data.`}</caption>
+        <thead>
+          <tr>
+            <th scope="col">Date</th>
+            <th scope="col">{label}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {points.map((p, i) => (
+            <tr key={p.date}>
+              <th scope="row">{shortDate(p.date)}</th>
+              <td>{format(values[i])}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
       {width > 0 && (
         <svg
           width={width}
           height={HEIGHT}
-          role="img"
-          aria-label={`${label} per day, ${first}${points.length > 1 ? ` to ${last}` : ""}. Sample data.`}
+          aria-hidden
           onPointerMove={onMove}
           onPointerLeave={() => setHover(null)}
           className="block text-[11px]"
