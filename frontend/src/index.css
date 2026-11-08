@@ -37,6 +37,10 @@
   --comm-7: #95592b;
   --comm-8: #5f6e84;
 
+  /* Nodes outside the community view: blue, so they read as stars, not ink; muted for non-bridges */
+  --node: var(--comm-1);
+  --node-muted: color-mix(in srgb, var(--comm-1) 35%, var(--surface-raised));
+
   --edge: rgba(42, 30, 26, 0.16);
   --edge-strong: rgba(42, 30, 26, 0.55);
   /* A pair bought together less often than chance predicts */
@@ -61,6 +65,8 @@
   --color-star-ink: var(--star-ink);
   --color-focus: var(--focus);
   --color-positive: var(--positive);
+  --color-node: var(--node);
+  --color-node-muted: var(--node-muted);
 
   --shadow-pop: var(--elev-pop);
 
