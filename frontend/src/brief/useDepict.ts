@@ -14,15 +14,23 @@ const keyOf = ({ days, segment }: Filters) => `${days ?? ""}|${segment ?? ""}`
 const unsettled = (depict: Depict) => depict.cards.some((c) => c.state === "waiting" || c.state === "answering")
 
 /**
- * The newer cards, keeping each older card object that has not changed. A poll sends every card
- * again as new objects, and the app knows answers and proposals by identity: the answer shown on
- * the graph, and the proposals already saved as campaigns.
+ * A card as the server sent it, keeping what has not changed of the one before. Every response
+ * sends the cards again as new objects, and the app knows answers and proposals by identity: the
+ * answer shown on the graph, and the proposals already saved as campaigns. An unchanged card is
+ * kept whole. A card being answered again (by a refresh here or in another browser) still carries
+ * its old answer, so that answer object is kept too.
  */
+export function keepCard(before: DepictCard | undefined, card: DepictCard): DepictCard {
+  if (!before || before.answered_at !== card.answered_at) return card
+  if (before.state === card.state) return before
+  return before.answer && card.answer ? { ...card, answer: before.answer } : card
+}
+
+/** The newer cards of a scope, each kept from the older ones where it can be (`keepCard`). */
 function keep(before: Depict | undefined, after: Depict): Depict {
   if (!before) return after
   const old = new Map(before.cards.map((c) => [c.key, c]))
-  const same = (a: DepictCard | undefined, b: DepictCard) => a && a.state === b.state && a.answered_at === b.answered_at
-  return { ...after, cards: after.cards.map((c) => (same(old.get(c.key), c) ? old.get(c.key)! : c)) }
+  return { ...after, cards: after.cards.map((c) => keepCard(old.get(c.key), c)) }
 }
 
 /**
@@ -108,7 +116,7 @@ export function useDepict(filters: Filters) {
         setKnown((before) => {
           const depict = before.get(scopeKey)
           if (!depict) return before
-          return new Map(before).set(scopeKey, { ...depict, cards: depict.cards.map((c) => (c.key === updated.key ? updated : c)) })
+          return new Map(before).set(scopeKey, { ...depict, cards: depict.cards.map((c) => (c.key === updated.key ? keepCard(c, updated) : c)) })
         })
       try {
         merge(await refreshCard(scope, card))

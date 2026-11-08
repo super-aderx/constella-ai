@@ -132,7 +132,8 @@ function Campaigns({ strategy, saved, onAddCampaign, blocked }: { strategy: Stra
       {strategy.campaigns.map((campaign, i) => {
         const refused = blocked?.(campaign) ?? null
         return (
-          <div key={campaign.name} className="rounded-xl bg-surface p-4">
+          // Two options may share a name: the position keeps their keys apart.
+          <div key={`${i}-${campaign.name}`} className="rounded-xl bg-surface p-4">
             <p className="flex items-center gap-2 text-[12px] font-medium text-ink-muted">
               Option {i + 1}
               {/* A bet on growth is marked: the data suggests it, nothing has proved it. */}
