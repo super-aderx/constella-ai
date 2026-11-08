@@ -233,12 +233,27 @@ export interface CampaignDraft {
   counties: string[]
   /** `null` for no pilot. */
   pilot: PilotDraft | null
+  /** At most 100 characters; `null` for none. */
+  slogan: string | null
 }
+
+/**
+ * Where a campaign is in its life. The server works it out from the dates and the actions taken
+ * each time it is read: it is never stored, so it moves on with the date by itself.
+ */
+export type CampaignStatus = "draft" | "scheduled" | "piloting" | "awaiting_approval" | "running" | "ended" | "cancelled"
+
+/** What the team can do to a campaign, besides editing and deleting a draft. */
+export type CampaignAction = "launch" | "approve" | "end" | "cancel"
 
 /** A stored campaign, as the API returns it. */
 export interface SavedCampaign extends Omit<CampaignDraft, "client_token"> {
   id: string
-  status: "scheduled"
-  /** ISO timestamp. */
+  status: CampaignStatus
+  /** ISO timestamps. Each lifecycle one is `null` until that happens. */
   created_at: string
+  launched_at: string | null
+  approved_at: string | null
+  ended_at: string | null
+  cancelled_at: string | null
 }
