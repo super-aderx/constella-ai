@@ -14,7 +14,7 @@ from fastapi import FastAPI, Query, Response
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from app import campaigns, products
+from app import campaigns, depict, products
 from app.infra import data, progress, store
 from app.roles.conversation import Turn
 from app.versions import v1, v2, v3
@@ -94,6 +94,59 @@ async def ask_stream(body: Question) -> StreamingResponse:
             task.cancel()  # the reader left: stop paying for a run nobody will see
 
     return StreamingResponse(lines(), media_type="application/x-ndjson")
+
+
+Days = Annotated[int | None, Query(gt=0)]
+Segment = Annotated[str | None, Query(min_length=1)]
+
+
+async def no_segment(days: int | None, segment: str | None) -> JSONResponse | None:
+    """A 422 for a segment that does not exist. The Brief caches a scope for everyone until
+    restart, so a typo must not start 8 runs on an empty network."""
+    if segment is None:
+        return None
+    known = (await asyncio.to_thread(data.load_network, days, None))["segments"]
+    if segment in known:
+        return None
+    return JSONResponse(status_code=422, content={"detail": f"There is no segment {segment}."})
+
+
+@app.post("/api/depict", response_model=depict.Depict)
+async def start_depict(days: Days = None, segment: Segment = None):
+    """Starts the Brief for a scope, unless it is already started: the app calls it whenever the
+    graph's filters settle, and polls GET for the cards."""
+    if error := await no_segment(days, segment):
+        return error
+    return depict.registry.start((days, segment))
+
+
+@app.get("/api/depict", response_model=depict.Depict)
+async def get_depict(days: Days = None, segment: Segment = None):
+    """The Brief's cards for a scope. Read only: a scope never started is 8 waiting cards."""
+    if error := await no_segment(days, segment):
+        return error
+    return depict.registry.get((days, segment))
+
+
+@app.post("/api/depict/cards/{key}/refresh", response_model=depict.DepictCard, status_code=202)
+async def refresh_depict_card(key: str, days: Days = None, segment: Segment = None):
+    """Runs one card again: 404 for a card that does not exist, 409 with the card while it is
+    still waiting or being answered."""
+    # Checked here rather than typed as a CardKey: an unknown card is a 404, not a 422.
+    if key not in depict.BY_KEY:
+        return JSONResponse(status_code=404, content={"detail": f"There is no card {key}."})
+    if error := await no_segment(days, segment):
+        return error
+    try:
+        return depict.registry.refresh((days, segment), key)
+    except depict.Busy as busy:
+        return JSONResponse(
+            status_code=409,
+            content={
+                "detail": "This card is already being answered.",
+                "card": busy.card.model_dump(mode="json"),
+            },
+        )
 
 
 @app.get("/api/campaign-options")

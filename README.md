@@ -79,6 +79,8 @@ frontend (React + Vite)  ──/api──▶  backend (FastAPI)  ──▶  Post
 - **`POST /api/ask`** answers a question. **`POST /api/ask/stream`** gives the same answer as
   lines of JSON: one `{"step": ...}` line as each step starts, then one `{"answer": ...}` or
   `{"error": ...}`.
+- **`/api/depict`** answers the Brief's 8 questions for a scope in the background (see
+  [Brief](#brief)).
 
 `AGENT_VERSION` picks how a question is answered:
 
@@ -153,6 +155,51 @@ has moved on since (someone else acted first, or the date moved it), the action 
   "cancel", "expected": <status>}` and returns the campaign after it. 409 `{detail, campaign}`
   when the status isn't `expected` or doesn't allow the action, 422 for a launch past its end
   date.
+
+### Brief
+
+The Brief answers 8 standard questions about the network for the scope the graph shows. In
+code it is called `depict` (`app/depict.py`), because `brief` already means v1's network summary.
+
+1. 潛力未發揮的產品組合分析
+2. 最佳共同購買組合排名
+3. 最差共同購買組合排名
+4. 暢銷產品組合之成因分析
+5. 社群內重要產品分析
+6. 跨社群產品推薦
+7. 社群內產品組合推薦
+8. 關鍵節點去留差異比較 (the network with and without each bridge)
+
+Each card runs a fixed plan, with no router and no writer: the analyst (reviewed), and for cards
+6 and 7 the strategist (reviewed) too. Their campaigns come without slogans. Answers have the
+same shape as a chat answer (`v3.Answer`, with `plan.route = "depict"`). Each prompt asks for a
+takeaway of at most 3 lines first, then a blank line and the detail. The cards run with no one's
+set-aside types, so one answer serves everyone.
+
+Before a card calls the model, a check in code can mark it **not enough data**: no pairs (cards 2
+to 4), no shared-partner candidates (1), no groups (5, 7), fewer than two groups (6), no bridge
+(8).
+
+Answers are kept in memory per scope (`days`, `segment`), shared by every user, until the server
+restarts. A scope's 8 cards run as background tasks, at most 4 calling the model at once. A scope
+you leave still finishes. A card whose run fails is marked failed; the others carry on.
+
+- **`POST /api/depict?days=&segment=`** starts the scope if it isn't started yet, and returns its
+  cards. Calling it again changes nothing.
+- **`GET /api/depict?days=&segment=`** returns the 8 cards, in order, each `waiting`,
+  `answering`, `answered`, `no_data` (with a `reason`) or `failed`. A scope never started is 8
+  `waiting` cards.
+- **`POST /api/depict/cards/{key}/refresh?days=&segment=`** runs one card again: 202 with the
+  card, which keeps its old answer while it runs. 404 for an unknown card, 409 `{detail, card}`
+  while it is waiting or being answered.
+- All three return 422 `{"detail": "There is no segment X."}` for a segment that does not exist.
+
+**Run one worker.** The cache is per process: with several workers each answers its own scopes,
+and a refresh reaches only one of them. `make backend` runs one.
+
+Two of the analyst's tools exist for the Brief, and the chat can use them too: `top_pairs` takes
+`order: "weakest"` for the pairs bought together least, and `without_item` says what the graph
+loses without one product type: its pairs, the parts it splits into and the groups only it links.
 
 ### Project layout
 
