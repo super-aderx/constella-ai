@@ -6,19 +6,55 @@ and it reports every rule broken at once so the wizard can mark every field in o
 
 `source_proposal` is a copy of the AI proposal the campaign came from, as the user saw it. It
 records what the AI said, not what will run, so no rule checks it.
+
+A campaign's status moves with the date: a launched campaign becomes Piloting on its pilot's first
+day without anyone touching it. So the table stores only facts that don't move (draft or launched,
+and when it was launched, approved, ended or cancelled), and `status_of` works out the status from
+them and today's date every time a campaign is read. No job has to run at midnight to keep a
+stored status true.
 """
 
 from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 # The strategist's campaign is the AI's proposal: name, basis, items, discount_percent,
 # audience and reason.
 from app.roles.strategist import Campaign as Proposal
 
 Problem = tuple[tuple[str | int, ...], str]
+
+CampaignStatus = Literal[
+    "draft", "scheduled", "piloting", "awaiting_approval", "running", "ended", "cancelled"
+]
+CampaignAction = Literal["launch", "approve", "end", "cancel"]
+Stored = Literal["draft", "launched"]  # the only statuses the table keeps
+
+STATUS_LABELS: dict[CampaignStatus, str] = {
+    "draft": "Draft",
+    "scheduled": "Scheduled",
+    "piloting": "Piloting",
+    "awaiting_approval": "Awaiting approval",
+    "running": "Running",
+    "ended": "Ended",
+    "cancelled": "Cancelled",
+}
+
+# The statuses each action may be taken from. Ended and cancelled are final: nothing leaves them.
+ACTIONS: dict[CampaignAction, set[CampaignStatus]] = {
+    "launch": {"draft"},
+    "approve": {"awaiting_approval"},
+    "end": {"piloting", "running"},
+    "cancel": {"scheduled", "piloting", "awaiting_approval", "running"},
+}
+
+SLOGAN_MAX = 100
+
+# The store's own calendar: "today" for a campaign is the store's day, wherever the server runs.
+STORE_ZONE = ZoneInfo("Asia/Taipei")
 
 
 class ProductRef(BaseModel):
@@ -47,17 +83,31 @@ class CampaignDraft(BaseModel):
     segment: str | None = None  # None: all customers
     counties: list[str] = []  # empty: every county
     pilot: Pilot | None = None
+    slogan: str | None = None  # None: no slogan
+
+    @field_validator("slogan")
+    @classmethod
+    def _no_blank_slogan(cls, slogan: str | None) -> str | None:
+        # A blank slogan is no slogan, so it is stored as NULL rather than as spaces.
+        slogan = slogan.strip() if slogan is not None else None
+        return slogan or None
 
 
 class SavedCampaign(BaseModel):
-    """A stored campaign, as POST /api/campaigns returns it."""
+    """A stored campaign, as the campaign endpoints return it. `status` is worked out from the
+    stored facts and today's date when it is read, never read from the table."""
 
     id: UUID
-    status: Literal["scheduled"]
+    status: CampaignStatus
     created_at: datetime
+    launched_at: datetime | None
+    approved_at: datetime | None
+    ended_at: datetime | None
+    cancelled_at: datetime | None
     source_proposal: Proposal | None
     title: str
     strategy: str
+    slogan: str | None
     products: list[ProductRef]  # types first, then products, each in stored order
     discount_percent: int
     starts_on: date
@@ -92,6 +142,8 @@ def draft_problems(
         problems.append((("title",), "Required."))
     if not draft.strategy.strip():
         problems.append((("strategy",), "Required."))
+    if draft.slogan is not None and len(draft.slogan) > SLOGAN_MAX:
+        problems.append((("slogan",), f"At most {SLOGAN_MAX} characters."))
 
     products = draft.products
     if not products:
@@ -127,3 +179,54 @@ def draft_problems(
         if pilot.ends_on >= draft.starts_on:
             problems.append((("pilot", "ends_on"), "Pilot must end before the campaign starts."))
     return problems
+
+
+def store_today() -> date:
+    """Today in the store's own time zone: what every date rule and status is measured against."""
+    return datetime.now(STORE_ZONE).date()
+
+
+def status_of(
+    *,
+    stored: Stored,
+    starts_on: date,
+    ends_on: date,
+    pilot: Pilot | None,
+    approved_at: datetime | None,
+    ended_at: datetime | None,
+    cancelled_at: datetime | None,
+    today: date,
+) -> CampaignStatus:
+    """The status a campaign shows today. Pure: the stored facts and today are passed in.
+
+    A pilot always ends before its campaign starts (draft_problems), so the pilot's branches and
+    the campaign's never overlap. A pilot on hold that is never approved waits until the
+    campaign's end date passes, and then the campaign is over like any other.
+    """
+    if stored == "draft":
+        return "draft"
+    if cancelled_at is not None:
+        return "cancelled"
+    if ended_at is not None or today > ends_on:
+        return "ended"
+    if pilot is not None:
+        if today < pilot.starts_on:
+            return "scheduled"
+        if today <= pilot.ends_on:
+            return "piloting"
+        if not pilot.auto_start and approved_at is None:
+            return "awaiting_approval"
+    if today < starts_on:
+        return "scheduled"
+    return "running"
+
+
+def action_problem(
+    action: CampaignAction, status: CampaignStatus, ends_on: date, today: date
+) -> str | None:
+    """Why an action that its status allows is still refused, or None. Whether the status allows
+    it at all is ACTIONS' job: that is a conflict with what the user saw, not a broken rule."""
+    if action == "launch" and ends_on < today:
+        # It would go straight to Ended: nothing would ever run.
+        return "The end date has passed."
+    return None

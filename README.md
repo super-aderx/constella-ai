@@ -109,6 +109,51 @@ router ─▶ analyst (reviewed) ─▶ strategist (reviewed, if asked) ─▶ w
 The tools are in `app/tools/`. Each call is written to the run's **ledger** (`L1`, `L2`, …),
 and that ledger is what the reviewer and the app's citations read.
 
+### Campaigns
+
+A campaign saved from the wizard starts as a **Draft**. Launching it hands it to the calendar:
+from then on its status follows its dates, in the store's time zone (Asia/Taipei).
+
+The table stores only facts that don't move with the date: `draft` or `launched`, and when it was
+launched, approved, ended and cancelled. The status you see is worked out from those facts, the
+campaign and pilot dates and today's date each time a campaign is read
+(`campaigns.status_of`), so no job has to run at midnight. In order, the first that applies:
+
+| Status | When |
+|---|---|
+| Draft | Not launched yet |
+| Cancelled | Cancelled |
+| Ended | Ended early, or past its end date |
+| Scheduled | Before the pilot starts |
+| Piloting | Between the pilot's start and end dates |
+| Awaiting approval | The pilot is over, it was set to wait for approval, and nobody approved it |
+| Scheduled | Before the campaign starts |
+| Running | Otherwise: between the campaign's start and end dates |
+
+A pilot on hold that is never approved stays in Awaiting approval until the campaign's end date,
+then ends.
+
+| Action | Allowed from | Records |
+|---|---|---|
+| Launch | Draft | launched (refused when the end date has passed) |
+| Approve | Awaiting approval | when it was approved |
+| End now | Piloting, Running | when it was ended |
+| Cancel | Scheduled, Piloting, Awaiting approval, Running | when it was cancelled |
+
+Only a Draft can be edited or deleted. Each action sends the status the user saw. If the campaign
+has moved on since (someone else acted first, or the date moved it), the action is refused with
+409 and the campaign as it stands now, so the first action wins.
+
+- **`POST /api/campaigns`** saves a draft from the wizard (201, or 200 with the stored one when
+  the same wizard saved it before). A broken rule is a 422 with the field it is about.
+- **`GET /api/campaigns`** lists every campaign, newest first, with its status today.
+- **`PUT /api/campaigns/{id}`** replaces a draft, including adding, changing or removing its
+  pilot. **`DELETE /api/campaigns/{id}`** deletes a draft (204). Both are 409 once it is launched.
+- **`POST /api/campaigns/{id}/actions`** takes `{"action": "launch" | "approve" | "end" |
+  "cancel", "expected": <status>}` and returns the campaign after it. 409 `{detail, campaign}`
+  when the status isn't `expected` or doesn't allow the action, 422 for a launch past its end
+  date.
+
 ### Project layout
 
 ```
@@ -174,6 +219,10 @@ Then create the tables the saved campaigns go in. It's safe to run again:
 ```bash
 make migrate
 ```
+
+Run it again after updating to a version that changes those tables, before starting the backend.
+The campaign lifecycle is one: it adds the slogan and lifecycle columns, and campaigns saved
+before it (status `scheduled`) count as launched when they were saved.
 
 ### Running
 
