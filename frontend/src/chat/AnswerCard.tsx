@@ -1,6 +1,6 @@
 import { GenMark } from "../Brand"
-import { callSummary, callText, chip, citeParts, cn } from "../lib"
-import type { Answer, Campaign, Figure, Review, Strategy, ToolCall } from "../types"
+import { callSummary, callText, chip, citeParts, cn, fmt } from "../lib"
+import type { Answer, Campaign, Figure, PairRef, Review, Strategy, ToolCall } from "../types"
 import { Chart } from "./Chart"
 
 /** Questions to ask, as quiet chips. */
@@ -33,6 +33,75 @@ function Cited({ text, figures }: { text: string; figures: Figure[] }) {
     ) : (
       part.text
     ),
+  )
+}
+
+/** A section's name: quiet, so the content leads. */
+const heading = "text-[12px] font-semibold text-ink-muted"
+
+const plain = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 })
+
+/** A figure's value as the app writes that measure elsewhere; a measure it does not know, as a plain number. */
+function figureValue(name: string, value: number) {
+  if (name === "revenue") return fmt.money(value)
+  if (name === "lift") return fmt.lift(value)
+  if (name === "orders" || name === "co_orders") return fmt.int(value)
+  return plain.format(value)
+}
+
+/**
+ * The answer's figures as stat tiles, each with the ledger entry it came from. A figure stated twice
+ * is one tile, and four are enough to scan: the text still cites them all.
+ */
+function KeyFigures({ figures }: { figures: Figure[] }) {
+  const seen = new Set<string>()
+  const tiles = figures
+    .filter((f) => {
+      const key = `${f.name}|${f.value}|${f.source}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    .slice(0, 4)
+  if (tiles.length === 0) return null
+  return (
+    // Two to a row in a narrow panel, all four in one row once the panel is wide enough.
+    <section className="@container flex flex-col gap-2">
+      <p className={heading}>Key figures</p>
+      <ul className="grid grid-cols-2 gap-2 @md:grid-cols-4">
+        {tiles.map((f) => (
+          <li key={`${f.name}|${f.value}|${f.source}`} className="flex flex-col rounded-xl bg-surface px-3 py-2">
+            <span className="text-[20px] leading-tight font-semibold tracking-[-0.02em] tabular-nums">{figureValue(f.name, f.value)}</span>
+            <span className="mt-0.5 text-[12px] text-ink-muted">
+              {f.name.replaceAll("_", " ")} <span className={sourceTag}>{f.source}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+/** The product types and pairs the answer names, as labels: what lights up on the graph. */
+function Mentioned({ items, pairs }: { items: string[]; pairs: PairRef[] }) {
+  if (items.length === 0 && pairs.length === 0) return null
+  const tag = "rounded-full bg-field px-2.5 py-0.5 text-[12px]"
+  return (
+    <section className="flex flex-col gap-2">
+      <p className={heading}>Mentioned</p>
+      <ul className="flex flex-wrap gap-1.5">
+        {items.map((item) => (
+          <li key={item} className={tag}>
+            {item}
+          </li>
+        ))}
+        {pairs.map((p) => (
+          <li key={`${p.a}+${p.b}`} className={cn(tag, "font-medium")}>
+            {p.a} + {p.b}
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 
@@ -122,7 +191,7 @@ interface Adding {
 function Campaigns({ strategy, saved, onAddCampaign, blocked }: { strategy: Strategy } & Adding) {
   return (
     <section className="flex flex-col gap-3 border-t border-line pt-3">
-      <p className="flex items-center gap-1.5 text-[12px] font-semibold text-ink-muted">
+      <p className={cn(heading, "flex items-center gap-1.5")}>
         <GenMark size={14} />
         Strategist
       </p>
@@ -133,7 +202,7 @@ function Campaigns({ strategy, saved, onAddCampaign, blocked }: { strategy: Stra
         const refused = blocked?.(campaign) ?? null
         return (
           // Two options may share a name: the position keeps their keys apart.
-          <div key={`${i}-${campaign.name}`} className="rounded-xl bg-surface p-4">
+          <div key={`${i}-${campaign.name}`} className="rounded-xl border border-line bg-surface p-4">
             <p className="flex items-center gap-2 text-[12px] font-medium text-ink-muted">
               Option {i + 1}
               {/* A bet on growth is marked: the data suggests it, nothing has proved it. */}
@@ -191,27 +260,34 @@ interface AnswerCardProps extends Adding {
 /** One answer from the agent: its text with cited figures, the tool calls behind it, a way to light it up on the graph, and what to ask next. */
 export function AnswerCard({ answer, next, shown, onShow, onAsk, saved, onAddCampaign, blocked }: AnswerCardProps) {
   return (
-    <article className="flex flex-col gap-3 rounded-xl bg-surface-raised p-4">
+    <article className="flex flex-col gap-4 rounded-2xl border border-line bg-surface-raised p-5">
       <p className="flex items-center gap-1.5 text-[12px] font-semibold text-ink-muted">
         <GenMark size={14} />
         Constella AI
       </p>
-      <p className="leading-6 text-pretty whitespace-pre-line">
+      <p className="leading-7 text-pretty whitespace-pre-line">
         <Cited text={answer.text} figures={answer.figures ?? []} />
       </p>
+      <KeyFigures figures={answer.figures ?? []} />
       {answer.options && answer.options.length > 0 && <Options options={answer.options} onPick={onAsk} />}
-      {answer.strategy && <Campaigns strategy={answer.strategy} saved={saved} onAddCampaign={onAddCampaign} blocked={blocked} />}
-      {answer.chart && answer.ledger && <Chart chart={answer.chart} ledger={answer.ledger} />}
-      {answer.review && <Verdict review={answer.review} />}
-      {answer.ledger && answer.ledger.length > 0 && <Ledger ledger={answer.ledger} charted={answer.chart?.source} />}
+      <Mentioned items={answer.items} pairs={answer.pairs} />
       {answer.items.length > 0 && (
-        <button type="button" aria-pressed={shown} onClick={onShow} className={cn(chip, "self-start font-medium", shown && "bg-star/25 text-star-ink hover:bg-star/25")}>
+        <button type="button" aria-pressed={shown} onClick={onShow} className={cn(chip, "-mt-1 self-start font-medium", shown && "bg-star/25 text-star-ink hover:bg-star/25")}>
           {shown ? "Shown on the graph" : "Show on the graph"}
         </button>
       )}
+      {answer.strategy && <Campaigns strategy={answer.strategy} saved={saved} onAddCampaign={onAddCampaign} blocked={blocked} />}
+      {answer.chart && answer.ledger && <Chart chart={answer.chart} ledger={answer.ledger} />}
+      {(answer.review || (answer.ledger && answer.ledger.length > 0)) && (
+        <section className="flex flex-col gap-2 border-t border-line pt-3">
+          <p className={heading}>How it was checked</p>
+          {answer.review && <Verdict review={answer.review} />}
+          {answer.ledger && answer.ledger.length > 0 && <Ledger ledger={answer.ledger} charted={answer.chart?.source} />}
+        </section>
+      )}
       {next.length > 0 && (
         <section className="flex flex-col gap-2 border-t border-line pt-3">
-          <p className="text-[12px] font-semibold text-ink-muted">Next step</p>
+          <p className={heading}>Next step</p>
           <Options options={next} onPick={onAsk} />
         </section>
       )}
