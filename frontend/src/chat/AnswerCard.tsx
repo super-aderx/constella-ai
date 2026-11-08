@@ -1,6 +1,6 @@
 import { GenMark } from "../Brand"
 import { callSummary, callText, chip, citeParts, cn } from "../lib"
-import type { Answer, Figure, Review, Strategy, ToolCall } from "../types"
+import type { Answer, Campaign, Figure, Review, Strategy, ToolCall } from "../types"
 import { Chart } from "./Chart"
 
 /** Questions to ask, as quiet chips. */
@@ -110,6 +110,8 @@ interface Adding {
   saved: number[]
   /** Opens the wizard for the proposal at this position. */
   onAddCampaign: (index: number) => void
+  /** Why a proposal cannot be saved here, if it cannot: its button is then disabled and says so. */
+  blocked?: (campaign: Campaign) => string | null
 }
 
 /**
@@ -117,7 +119,7 @@ interface Adding {
  * writer's slogans and a way to save it as a campaign. Every proposal shown gets the button, even
  * one that did not pass its check: the team decides, and the save is checked again.
  */
-function Campaigns({ strategy, saved, onAddCampaign }: { strategy: Strategy } & Adding) {
+function Campaigns({ strategy, saved, onAddCampaign, blocked }: { strategy: Strategy } & Adding) {
   return (
     <section className="flex flex-col gap-3 border-t border-line pt-3">
       <p className="flex items-center gap-1.5 text-[12px] font-semibold text-ink-muted">
@@ -127,41 +129,50 @@ function Campaigns({ strategy, saved, onAddCampaign }: { strategy: Strategy } & 
       <p className="leading-6 text-pretty whitespace-pre-line">
         <Cited text={strategy.text} figures={strategy.figures} />
       </p>
-      {strategy.campaigns.map((campaign, i) => (
-        <div key={campaign.name} className="rounded-xl bg-surface p-4">
-          <p className="flex items-center gap-2 text-[12px] font-medium text-ink-muted">
-            Option {i + 1}
-            {/* A bet on growth is marked: the data suggests it, nothing has proved it. */}
-            <span className={cn("rounded-full px-2 py-px", campaign.basis === "potential" ? "bg-star/20 text-star-ink" : "bg-field")}>
-              {campaign.basis === "potential" ? "Potential · to test" : "Sells together today"}
-            </span>
-          </p>
-          <h3 className="mt-0.5 text-[18px] leading-snug font-semibold tracking-[-0.02em]">{campaign.name}</h3>
-          <p className="mt-1.5 flex flex-wrap gap-1.5 text-[12px] font-semibold">
-            <span className="rounded-md bg-action px-2 py-0.5 text-on-action">{campaign.discount_percent}% off</span>
-            <span className="rounded-md bg-field px-2 py-0.5">{campaign.items.join(" + ")}</span>
-            <span className="rounded-md bg-field px-2 py-0.5">{campaign.audience ?? "All customers"}</span>
-          </p>
-          {campaign.slogans.length > 0 && (
-            <ul className="mt-3 flex flex-col gap-1 font-semibold">
-              {campaign.slogans.map((slogan) => (
-                <li key={slogan.text}>
-                  “{slogan.text}”
-                  {/* A pun is explained: it only lands when the sound is heard. */}
-                  {slogan.pun && <span className="ml-2 text-[12px] font-normal text-ink-muted">{slogan.pun}</span>}
-                </li>
-              ))}
-            </ul>
-          )}
-          <p className="mt-3 border-t border-line pt-2 text-[12px] text-ink-muted">
-            <Cited text={campaign.reason} figures={strategy.figures} />
-          </p>
-          {/* Still a button once saved: saving another from the same proposal is allowed, after a warning. */}
-          <button type="button" onClick={() => onAddCampaign(i)} className={cn(chip, "mt-3 font-medium", (saved[i] ?? 0) > 0 && "text-positive")}>
-            {(saved[i] ?? 0) > 0 ? "Saved ✓" : "Add as campaign"}
-          </button>
-        </div>
-      ))}
+      {strategy.campaigns.map((campaign, i) => {
+        const refused = blocked?.(campaign) ?? null
+        return (
+          // Two options may share a name: the position keeps their keys apart.
+          <div key={`${i}-${campaign.name}`} className="rounded-xl bg-surface p-4">
+            <p className="flex items-center gap-2 text-[12px] font-medium text-ink-muted">
+              Option {i + 1}
+              {/* A bet on growth is marked: the data suggests it, nothing has proved it. */}
+              <span className={cn("rounded-full px-2 py-px", campaign.basis === "potential" ? "bg-star/20 text-star-ink" : "bg-field")}>
+                {campaign.basis === "potential" ? "Potential · to test" : "Sells together today"}
+              </span>
+            </p>
+            <h3 className="mt-0.5 text-[18px] leading-snug font-semibold tracking-[-0.02em]">{campaign.name}</h3>
+            <p className="mt-1.5 flex flex-wrap gap-1.5 text-[12px] font-semibold">
+              <span className="rounded-md bg-action px-2 py-0.5 text-on-action">{campaign.discount_percent}% off</span>
+              <span className="rounded-md bg-field px-2 py-0.5">{campaign.items.join(" + ")}</span>
+              <span className="rounded-md bg-field px-2 py-0.5">{campaign.audience ?? "All customers"}</span>
+            </p>
+            {campaign.slogans.length > 0 && (
+              <ul className="mt-3 flex flex-col gap-1 font-semibold">
+                {campaign.slogans.map((slogan) => (
+                  <li key={slogan.text}>
+                    “{slogan.text}”
+                    {/* A pun is explained: it only lands when the sound is heard. */}
+                    {slogan.pun && <span className="ml-2 text-[12px] font-normal text-ink-muted">{slogan.pun}</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="mt-3 border-t border-line pt-2 text-[12px] text-ink-muted">
+              <Cited text={campaign.reason} figures={strategy.figures} />
+            </p>
+            {/* Still a button once saved: saving another from the same proposal is allowed, after a warning. */}
+            <button
+              type="button"
+              disabled={refused !== null}
+              onClick={() => onAddCampaign(i)}
+              className={cn(chip, "mt-3 font-medium disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-field", refused === null && (saved[i] ?? 0) > 0 && "text-positive")}
+            >
+              {refused ?? ((saved[i] ?? 0) > 0 ? "Saved ✓" : "Add as campaign")}
+            </button>
+          </div>
+        )
+      })}
     </section>
   )
 }
@@ -178,7 +189,7 @@ interface AnswerCardProps extends Adding {
 }
 
 /** One answer from the agent: its text with cited figures, the tool calls behind it, a way to light it up on the graph, and what to ask next. */
-export function AnswerCard({ answer, next, shown, onShow, onAsk, saved, onAddCampaign }: AnswerCardProps) {
+export function AnswerCard({ answer, next, shown, onShow, onAsk, saved, onAddCampaign, blocked }: AnswerCardProps) {
   return (
     <article className="flex flex-col gap-3 rounded-xl bg-surface-raised p-4">
       <p className="flex items-center gap-1.5 text-[12px] font-semibold text-ink-muted">
@@ -189,7 +200,7 @@ export function AnswerCard({ answer, next, shown, onShow, onAsk, saved, onAddCam
         <Cited text={answer.text} figures={answer.figures ?? []} />
       </p>
       {answer.options && answer.options.length > 0 && <Options options={answer.options} onPick={onAsk} />}
-      {answer.strategy && <Campaigns strategy={answer.strategy} saved={saved} onAddCampaign={onAddCampaign} />}
+      {answer.strategy && <Campaigns strategy={answer.strategy} saved={saved} onAddCampaign={onAddCampaign} blocked={blocked} />}
       {answer.chart && answer.ledger && <Chart chart={answer.chart} ledger={answer.ledger} />}
       {answer.review && <Verdict review={answer.review} />}
       {answer.ledger && answer.ledger.length > 0 && <Ledger ledger={answer.ledger} charted={answer.chart?.source} />}
