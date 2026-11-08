@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react"
+import { useEffect, useRef, type FormEvent } from "react"
 import { GenMark } from "../Brand"
 import type { Answer, Campaign, Turn } from "../types"
 import { AnswerCard, Options } from "./AnswerCard"
@@ -16,6 +16,11 @@ interface ChatProps {
   /** The answer the graph is showing. */
   shown: Answer | null
   onSend: (question: string) => void
+  /** The composer's text, kept by the app so other parts of it can add to it. */
+  draft: string
+  onDraftChange: (text: string) => void
+  /** Goes up when the composer should take focus, with the cursor at the end. */
+  draftFocus: number
   onShow: (answer: Answer) => void
   onReset: () => void
   /** Opens the campaign wizard for a proposal. */
@@ -28,7 +33,7 @@ interface ChatProps {
  * The conversation with the agent: suggestions when empty, then questions and answers, and the
  * composer. Its proposals open the campaign wizard, which the app owns.
  */
-export function Chat({ turns, types, ignored, onIgnore, shown, onSend, onShow, onReset, onAddCampaign, savedProposals }: ChatProps) {
+export function Chat({ turns, types, ignored, onIgnore, shown, onSend, draft, onDraftChange, draftFocus, onShow, onReset, onAddCampaign, savedProposals }: ChatProps) {
   const busy = turns.some((t) => !t.answer)
   const endRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -83,7 +88,7 @@ export function Chat({ turns, types, ignored, onIgnore, shown, onSend, onShow, o
       </div>
 
       <Ignored types={types} ignored={ignored} onIgnore={onIgnore} />
-      <Composer onSend={onSend} busy={busy} />
+      <Composer text={draft} onText={onDraftChange} focus={draftFocus} onSend={onSend} busy={busy} />
     </section>
   )
 }
@@ -124,24 +129,41 @@ function Ignored({ types, ignored, onIgnore }: Pick<ChatProps, "types" | "ignore
   )
 }
 
+interface ComposerProps {
+  text: string
+  onText: (text: string) => void
+  /** Each new value focuses the field, cursor at the end; 0, the first, does not. */
+  focus: number
+  onSend: (question: string) => void
+  busy: boolean
+}
+
 /** Only the button sends; Enter adds a line. The field grows with its text. */
-function Composer({ onSend, busy }: { onSend: (question: string) => void; busy: boolean }) {
-  const [text, setText] = useState("")
+function Composer({ text, onText, focus, onSend, busy }: ComposerProps) {
+  const field = useRef<HTMLTextAreaElement>(null)
+  // Runs after the tab switch that comes with it has rendered: a hidden panel's field cannot take focus.
+  useEffect(() => {
+    const el = field.current
+    if (!focus || !el) return
+    el.focus()
+    el.setSelectionRange(el.value.length, el.value.length)
+  }, [focus])
   const ready = text.trim() !== "" && !busy
   const submit = (e: FormEvent) => {
     e.preventDefault()
     if (!ready) return
     onSend(text.trim())
-    setText("")
+    onText("")
   }
   return (
     <form onSubmit={submit} className="mt-2 flex items-end gap-2 rounded-2xl bg-surface-raised p-2 shadow-pop focus-within:outline-2 focus-within:outline-focus">
       <textarea
+        ref={field}
         rows={1}
         value={text}
-        placeholder="Ask about product types, pairs or groups"
+        placeholder="詢問商品類型、組合或分組"
         aria-label="Message Constella AI"
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => onText(e.target.value)}
         className="max-h-32 min-h-10 min-w-0 flex-1 resize-none bg-transparent px-2 py-2 leading-6 outline-none [field-sizing:content] placeholder:text-ink-faint"
       />
       <button

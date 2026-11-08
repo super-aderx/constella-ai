@@ -140,6 +140,19 @@ export default function App() {
     }
   }
   const [tab, setTab] = useState<Tab>("chat")
+  /** The chat's unsent text: kept here so the graph's node card can add a question to it. */
+  const [draft, setDraft] = useState("")
+  /** Goes up each time the composer should take focus, as after a node card adds to the draft. */
+  const [draftFocus, setDraftFocus] = useState(0)
+  /**
+   * A question from the node card, added to what is being typed on a line of its own and left to edit:
+   * the user sends it, not the card.
+   */
+  const addToDraft = (text: string) => {
+    setDraft((prev) => (prev.trim() ? prev + "\n" + text : text))
+    setTab("chat")
+    setDraftFocus((n) => n + 1)
+  }
   /**
    * The campaign wizard on screen, and which opening it is: each opening is a new draft. An edit
    * also carries how the Campaigns tab takes in its outcome.
@@ -290,7 +303,7 @@ export default function App() {
               </p>
             </div>
           </div>
-          {selected && network.items.some((i) => i.name === selected) && <ItemCard network={network} name={selected} onSelect={setSelected} onAsk={send} ignored={ignored.includes(selected)} onIgnore={() => ignore(selected)} />}
+          {selected && network.items.some((i) => i.name === selected) && <ItemCard network={network} name={selected} onSelect={setSelected} onDraft={addToDraft} ignored={ignored.includes(selected)} onIgnore={() => ignore(selected)} />}
         </Graph>
         {other && drawnOther && compared && (
           <Graph
@@ -314,7 +327,7 @@ export default function App() {
               </p>
             </div>
             {/* The same type's card on this side, with this scope's figures. */}
-            {selected && other.items.some((i) => i.name === selected) && <ItemCard network={other} name={selected} onSelect={setSelected} onAsk={send} ignored={ignored.includes(selected)} onIgnore={() => ignore(selected)} />}
+            {selected && other.items.some((i) => i.name === selected) && <ItemCard network={other} name={selected} onSelect={setSelected} onDraft={addToDraft} ignored={ignored.includes(selected)} onIgnore={() => ignore(selected)} />}
           </Graph>
         )}
       </div>
@@ -353,6 +366,9 @@ export default function App() {
                 onIgnore={ignore}
                 shown={selected ? null : shown}
                 onSend={send}
+                draft={draft}
+                onDraftChange={setDraft}
+                draftFocus={draftFocus}
                 onShow={show}
                 onReset={() => {
                   setTurns([])

@@ -1,7 +1,8 @@
 import { useLayoutEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode } from "react"
-import { fmt, pairKey, partnersOf } from "../lib"
+import { cn, fmt, pairKey, partnersOf } from "../lib"
 import type { Item, Metric, Mode, Network, Pair, PairRef } from "../types"
 import { forceLayout, type Positions } from "./layout"
+import { box } from "./Toolbar"
 
 /** A product type in no community is drawn neutral. */
 export const communityColor = (community: number | null) => (community == null ? "var(--ink-faint)" : `var(--comm-${(community % 8) + 1})`)
@@ -33,7 +34,7 @@ interface GraphProps {
 const PAD = { x: 72, top: 84, bottom: 84 }
 const HOME = { x: 0, y: 0, k: 1 }
 const ZOOM = { min: 0.5, max: 4, step: 1.3 }
-const control = "h-8 min-w-8 cursor-pointer px-2 text-ink-muted transition-colors hover:text-ink disabled:pointer-events-none disabled:opacity-40"
+const control = "h-full min-w-8 cursor-pointer px-2 text-ink-muted transition-colors hover:text-ink disabled:pointer-events-none disabled:opacity-40"
 
 /**
  * The product type network on a white panel, drawn to the size of its container.
@@ -133,7 +134,7 @@ export function Graph({ network, lit, layout = network, mode, metric, toolbar, o
   const hoverPair = network.pairs.find((p) => pairKey(p.a, p.b) === hover)
 
   const fill = (item: Item) =>
-    mode === "community" ? communityColor(item.community) : mode === "bridge" && !item.bridge ? "var(--ink-faint)" : "var(--action)"
+    mode === "community" ? communityColor(item.community) : mode === "bridge" && !item.bridge ? "var(--node-muted)" : "var(--node)"
 
   // Community view: a soft disc behind each community, centred on its product types, reaching the farthest one.
   const discs = (mode === "community" ? network.communities : []).map((_, c) => {
@@ -229,7 +230,7 @@ export function Graph({ network, lit, layout = network, mode, metric, toolbar, o
             >
               <g className="origin-center animate-star-in [transform-box:fill-box]" style={{ animationDelay: `${i * 18}ms` }}>
                 {star && <circle r={r + 7} fill="var(--star)" opacity={0.22} />}
-                <circle r={r} fill={star ? "var(--star)" : fill(item)} opacity={mode === "bridge" && !item.bridge && !star ? 0.5 : 1} />
+                <circle r={r} fill={star ? "var(--star)" : fill(item)} />
                 {hover === item.name && <circle r={r + 4} fill="none" stroke="var(--ink)" strokeOpacity={0.6} strokeWidth={1.5} />}
               </g>
               {labelled && (
@@ -256,13 +257,13 @@ export function Graph({ network, lit, layout = network, mode, metric, toolbar, o
         </p>
       )}
 
-      <div className="absolute top-4 right-4 flex items-start gap-2">
-      <div className="flex items-center rounded-lg border border-line bg-surface-raised text-[15px]">
-        <button type="button" aria-label="Zoom out" disabled={view.k <= ZOOM.min} onClick={() => zoom(1 / ZOOM.step)} className={control}>
+      <div className="absolute top-4 right-4 flex items-center gap-2">
+      <div className={cn(box, "flex items-center")}>
+        <button type="button" aria-label="Zoom out" disabled={view.k <= ZOOM.min} onClick={() => zoom(1 / ZOOM.step)} className={cn(control, "text-[15px]")}>
           −
         </button>
         <span className="w-10 text-center text-[12px] text-ink-muted tabular-nums">{Math.round(view.k * 100)}%</span>
-        <button type="button" aria-label="Zoom in" disabled={view.k >= ZOOM.max} onClick={() => zoom(ZOOM.step)} className={control}>
+        <button type="button" aria-label="Zoom in" disabled={view.k >= ZOOM.max} onClick={() => zoom(ZOOM.step)} className={cn(control, "text-[15px]")}>
           +
         </button>
         <button
@@ -271,7 +272,7 @@ export function Graph({ network, lit, layout = network, mode, metric, toolbar, o
             setView(HOME)
             setMoved({})
           }}
-          className={`${control} border-l border-line px-3 text-[12px] font-medium`}
+          className={`${control} border-l border-line px-3 font-medium`}
         >
           Reset
         </button>
@@ -288,10 +289,16 @@ export function Graph({ network, lit, layout = network, mode, metric, toolbar, o
             </li>
           ))}
         {mode === "bridge" && (
-          <li className="inline-flex items-center gap-1.5">
-            <span className="size-2.5 rounded-full bg-action" />
-            Bridge: connects the most other product types
-          </li>
+          <>
+            <li className="inline-flex items-center gap-1.5">
+              <span className="size-2.5 rounded-full bg-node" />
+              Bridge: connects the most other product types
+            </li>
+            <li className="inline-flex items-center gap-1.5">
+              <span className="size-2.5 rounded-full bg-node-muted" />
+              Other product types
+            </li>
+          </>
         )}
         {metric === "lift" && network.pairs.some((p) => p.lift < 1) && (
           <li className="inline-flex items-center gap-1.5">

@@ -22,7 +22,8 @@ const METRICS: { id: Metric; label: string }[] = [
   { id: "coOrders", label: "Bought together" },
 ]
 
-const box = "h-8 rounded-lg border border-line bg-surface-raised text-[13px]"
+/** A toolbar control: the graph's zoom group is drawn to the same height, so the row lines up. */
+export const box = "h-8 rounded-lg border border-line bg-surface-raised text-[13px]"
 const caption = "text-[12px] font-medium text-ink-muted"
 
 interface ToolbarProps {
