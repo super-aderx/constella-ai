@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type MouseEvent } from "react"
-import { CampaignError, getCampaignOptions, saveCampaign } from "../api"
+import { CampaignConflict, CampaignError, getCampaignOptions, saveCampaign, updateCampaign } from "../api"
 import { cn } from "../lib"
 import type { Campaign, CampaignOptions, SavedCampaign } from "../types"
 import { CampaignStep } from "./CampaignStep"
-import { fromProposal, isDirty, toRequest, today, type FieldErrors, type WizardDraft } from "./draft"
+import { fromProposal, fromSaved, isDirty, toRequest, today, type FieldErrors, type WizardDraft } from "./draft"
 import { PilotStep } from "./PilotStep"
 import { ReviewStep } from "./ReviewStep"
 import { stepErrors, stepOf } from "./validate"
@@ -18,12 +18,21 @@ const STEPS: { n: StepNumber; label: string }[] = [
 
 const button = "h-9 cursor-pointer rounded-lg px-4 text-[14px] font-medium transition-colors disabled:cursor-default"
 
+/**
+ * What the wizard is open for: a new campaign from an AI proposal, or a saved draft to edit.
+ * `alreadySaved` is how many campaigns were already saved from the proposal: more than none warns
+ * before saving another.
+ */
+export type WizardMode = { kind: "create"; proposal: Campaign; alreadySaved: number } | { kind: "edit"; campaign: SavedCampaign }
+
 interface CampaignWizardProps {
-  proposal: Campaign
-  /** How many campaigns were already saved from this proposal: more than none warns before saving another. */
-  alreadySaved: number
+  mode: WizardMode
   onClose: () => void
   onSaved: (campaign: SavedCampaign) => void
+  /** The draft being edited is no longer a draft: the server sent the campaign as it is now. */
+  onConflict: (campaign: SavedCampaign) => void
+  /** The draft being edited was deleted. */
+  onGone: () => void
 }
 
 /** Whether a field's problem is still about what the field holds: it goes once the field is edited. */
@@ -34,13 +43,16 @@ function stillHolds(key: string, before: WizardDraft, after: WizardDraft) {
 }
 
 /**
- * Turns an AI proposal into a campaign, in a modal over the page: the campaign (step 1), an
- * optional pilot (step 2), and a review before saving (step 3). The draft lives here, above the
- * steps, so Back keeps every value. Each opening is one draft with its own token, so a double
- * click or a retry stores it once; saving the same proposal again on purpose opens a new one.
+ * Turns an AI proposal into a campaign, or edits a saved draft, in a modal over the page: the
+ * campaign (step 1), an optional pilot (step 2), and a review before saving (step 3). The draft
+ * lives here, above the steps, so Back keeps every value. Each opening is one draft with its own
+ * token, so a double click or a retry stores it once; saving the same proposal again on purpose
+ * opens a new one. An edit replaces the draft by its id instead.
  */
-export function CampaignWizard({ proposal, alreadySaved, onClose, onSaved }: CampaignWizardProps) {
-  const [initial] = useState(() => fromProposal(proposal))
+export function CampaignWizard({ mode, onClose, onSaved, onConflict, onGone }: CampaignWizardProps) {
+  const [initial] = useState(() => (mode.kind === "create" ? fromProposal(mode.proposal) : fromSaved(mode.campaign)))
+  // A stored campaign keeps its proposal without the slogans, so only a new one has any to offer.
+  const slogans = mode.kind === "create" ? mode.proposal.slogans.map((slogan) => slogan.text) : []
   const [draft, setDraft] = useState(initial)
   const [step, setStep] = useState<StepNumber>(1)
   // The step checks' problems, and the server's. The server's are kept apart because Next cannot
@@ -110,7 +122,7 @@ export function CampaignWizard({ proposal, alreadySaved, onClose, onSaved }: Cam
 
   const save = async () => {
     if (saving.current) return
-    if (alreadySaved > 0 && !window.confirm("You already saved a campaign from this proposal. Save another?")) return
+    if (mode.kind === "create" && mode.alreadySaved > 0 && !window.confirm("You already saved a campaign from this proposal. Save another?")) return
     const found = stepErrors(3, draft, today())
     if (Object.keys(found).length > 0) {
       setErrors(found)
@@ -120,12 +132,16 @@ export function CampaignWizard({ proposal, alreadySaved, onClose, onSaved }: Cam
     setPending(true)
     setSaveError(null)
     try {
-      const saved = await saveCampaign(toRequest(draft))
+      const request = toRequest(draft)
+      const saved = mode.kind === "create" ? await saveCampaign(request) : await updateCampaign(mode.campaign.id, request)
       onSaved(saved)
     } catch (error) {
       // The draft and its token are kept: a retry cannot store the campaign twice.
       saving.current = false
       setPending(false)
+      // Nothing here can be saved any more: the wizard closes, and the list is put right.
+      if (error instanceof CampaignConflict) return onConflict(error.campaign)
+      if (error instanceof CampaignError && error.gone) return onGone()
       if (error instanceof CampaignError && error.fields) {
         // A 422 stored nothing, so the values can be changed again.
         setLocked(false)
@@ -169,7 +185,7 @@ export function CampaignWizard({ proposal, alreadySaved, onClose, onSaved }: Cam
         <header className="flex flex-col gap-3 border-b border-line px-6 pt-5 pb-4">
           <div className="flex items-start justify-between gap-4">
             <h2 id="campaign-wizard-title" className="text-[18px] font-semibold tracking-[-0.02em]">
-              Add as campaign
+              {mode.kind === "create" ? "Add as campaign" : "Edit campaign"}
             </h2>
             <button type="button" aria-label="Close" onClick={requestClose} className="cursor-pointer px-1 text-[20px] leading-none text-ink-muted hover:text-ink">
               ×
@@ -187,7 +203,7 @@ export function CampaignWizard({ proposal, alreadySaved, onClose, onSaved }: Cam
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-          {step === 1 && <CampaignStep draft={draft} errors={shown} onChange={change} options={options} optionsFailed={optionsFailed} today={today()} />}
+          {step === 1 && <CampaignStep draft={draft} errors={shown} onChange={change} options={options} optionsFailed={optionsFailed} today={today()} slogans={slogans} />}
           {step === 2 && <PilotStep draft={draft} errors={shown} onChange={change} />}
           {step === 3 && <ReviewStep draft={draft} error={saveError} />}
         </div>

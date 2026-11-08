@@ -8,10 +8,12 @@ interface CampaignStepProps extends StepProps {
   options: CampaignOptions | null
   optionsFailed: boolean
   today: string
+  /** The proposal's AI slogans, offered to pick and edit. Empty for none, and when editing a saved campaign. */
+  slogans: string[]
 }
 
 /** Step 1: what the campaign is, what it covers, when, and for whom. */
-export function CampaignStep({ draft, errors, onChange, options, optionsFailed, today }: CampaignStepProps) {
+export function CampaignStep({ draft, errors, onChange, options, optionsFailed, today, slogans }: CampaignStepProps) {
   // A segment the proposal named stays offered even if the list lacks it: the server's check marks it on Save.
   const segments = options?.segments ?? []
   const shownSegments = draft.segment && !segments.includes(draft.segment) ? [draft.segment, ...segments] : segments
@@ -32,6 +34,36 @@ export function CampaignStep({ draft, errors, onChange, options, optionsFailed, 
             onChange={(e) => onChange({ strategy: e.target.value })}
             className={cn(input, "h-auto py-2 leading-6 [field-sizing:content]")}
           />
+        )}
+      </Field>
+      <Field label="Slogan (optional)" error={errors.slogan}>
+        {(control) => (
+          <>
+            <input
+              {...control}
+              // No maxLength: it counts UTF-16 units, so it would cut off emoji the server accepts. The step check counts characters.
+              value={draft.slogan}
+              placeholder={slogans.length > 0 ? "Pick one below and edit it, or write your own" : "Write one, or leave it empty"}
+              onChange={(e) => onChange({ slogan: e.target.value })}
+              className={input}
+            />
+            {/* Picking one copies it into the field, so it can be edited; the others stay on offer. */}
+            {slogans.length > 0 && (
+              <div className="flex flex-wrap gap-1.5" aria-label="AI slogans">
+                {slogans.map((slogan) => (
+                  <button
+                    key={slogan}
+                    type="button"
+                    aria-pressed={draft.slogan === slogan}
+                    onClick={() => onChange({ slogan })}
+                    className={cn("cursor-pointer rounded-full px-2.5 py-0.5 text-[13px] transition-colors", draft.slogan === slogan ? "bg-action text-on-action" : "bg-field hover:bg-line")}
+                  >
+                    {slogan}
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </Field>
       <Field label="Products" error={errors.products}>

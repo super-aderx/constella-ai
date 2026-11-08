@@ -1,12 +1,17 @@
-import { use, useDeferredValue, useMemo, useRef, useState, type CSSProperties } from "react"
+import { use, useCallback, useDeferredValue, useMemo, useRef, useState, type CSSProperties } from "react"
 import { ask, getNetwork } from "./api"
 import { Logo } from "./Brand"
+import { CampaignList, type CampaignChange } from "./campaign/CampaignList"
+import { CampaignWizard, type WizardMode } from "./campaign/CampaignWizard"
+import { changedMessage } from "./campaign/status"
+import { Toast } from "./campaign/Toast"
 import { Chat } from "./chat/Chat"
 import { Graph, type Lit } from "./graph/Graph"
 import { ItemCard } from "./graph/ItemCard"
 import { PERIODS, Toolbar } from "./graph/Toolbar"
 import { cn, pairKey, partnersOf } from "./lib"
-import type { Answer, Filters, Metric, Mode, Network, Step, Turn } from "./types"
+import { Tabs, type Tab } from "./Tabs"
+import type { Answer, Campaign, Filters, Metric, Mode, Network, SavedCampaign, Step, Turn } from "./types"
 
 /** Earlier turns sent with a question: enough for a follow-up, few enough to keep a run cheap. */
 const HISTORY = 3
@@ -57,7 +62,7 @@ function union(a: Network, b: Network): Network {
   }
 }
 
-/** The chat's width beside the graph, in px: what it starts at, and how far it can be dragged. */
+/** The panel's width beside the graph, in px: what it starts at, and how far it can be dragged. */
 const CHAT = { initial: 432, min: 320, max: 760, key: "chat-width" }
 
 /** The width chosen last time, if the browser kept it. */
@@ -83,7 +88,8 @@ function storedIgnored(): string[] {
 }
 
 /**
- * The two features side by side: the network graph and the chat. They are linked both ways:
+ * The two features side by side: the network graph and a panel of tabs (the chat, the saved
+ * campaigns, the brief). The graph and the chat are linked both ways:
  * an answer lights up its items and pairs on the graph, and a product type on the graph can be asked about.
  * The graph follows the answer's scope too: it switches to the period or segment an answer is about,
  * and splits in two when an answer compares two scopes.
@@ -132,6 +138,34 @@ export default function App() {
       // Not kept for next time: the width still applies now.
     }
   }
+  const [tab, setTab] = useState<Tab>("chat")
+  /**
+   * The campaign wizard on screen, and which opening it is: each opening is a new draft. An edit
+   * also carries how the Campaigns tab takes in its outcome.
+   */
+  const [wizard, setWizard] = useState<{ mode: WizardMode; opening: number; change?: CampaignChange } | null>(null)
+  const openings = useRef(0)
+  // Keyed by the proposal itself, not its place in the conversation: a cleared conversation's new
+  // proposals are new objects, so none shows "Saved ✓" for a campaign saved from an earlier one.
+  const [savedProposals, setSavedProposals] = useState<Map<Campaign, number>>(() => new Map())
+  /** Goes up on every save or move of a campaign, so the Campaigns tab fetches the list again. */
+  const [campaignsVersion, setCampaignsVersion] = useState(0)
+  const campaignsChanged = () => setCampaignsVersion((v) => v + 1)
+  const [toast, setToast] = useState<string | null>(null)
+  const hideToast = useCallback(() => setToast(null), [])
+  /** Opens the wizard on a new campaign from an AI proposal: from the chat, and from the brief. */
+  const openWizard = (proposal: Campaign) => setWizard({ mode: { kind: "create", proposal, alreadySaved: savedProposals.get(proposal) ?? 0 }, opening: ++openings.current })
+  const editCampaign = (campaign: SavedCampaign, change: CampaignChange) => setWizard({ mode: { kind: "edit", campaign }, opening: ++openings.current, change })
+  /**
+   * The wizard closes on anything that ends it, and the Campaigns tab fetches the list again. What
+   * the server answered is applied first, so a slow or failed refetch never leaves it out of date.
+   */
+  const wizardDone = (message: string) => {
+    setWizard(null)
+    setToast(message)
+    campaignsChanged()
+  }
+
   const drawn = useMemo(() => visible(network, unpaired, shown), [network, unpaired, shown])
   const drawnOther = useMemo(() => other && visible(other, unpaired, shown), [other, unpaired, shown])
   const shared = useMemo(() => (other ? union(network, other) : undefined), [network, other])
@@ -165,6 +199,8 @@ export default function App() {
   // One question at a time, so only the last turn can be waiting.
   const send = async (question: string) => {
     if (turns.some((t) => !t.answer)) return
+    // Asked from the graph while another tab shows: the answer would come in out of sight.
+    setTab("chat")
     setTurns((t) => [...t, { question }])
     // A failed request is shown as the answer, so the chat never hangs.
     const asked = chosen.current
@@ -270,18 +306,18 @@ export default function App() {
         )}
       </div>
       <div className="relative grid min-h-0 grid-rows-[minmax(0,1fr)]">
-        {/* Side by side only: the handle sits in the gap between the graph and the chat. Drag it, or use the arrow keys; a double click resets. */}
+        {/* Side by side only: the handle sits in the gap between the graph and the panel. Drag it, or use the arrow keys; a double click resets. */}
         <div
           role="separator"
           aria-orientation="vertical"
-          aria-label="Resize the chat"
+          aria-label="Resize the panel"
           aria-valuenow={chatWidth}
           aria-valuemin={CHAT.min}
           aria-valuemax={CHAT.max}
           tabIndex={0}
           title="Drag to resize"
           onPointerDown={(e) => e.currentTarget.setPointerCapture(e.pointerId)}
-          // The chat ends at the page's padding, so its width is what lies right of the pointer, less that.
+          // The panel ends at the page's padding, so its width is what lies right of the pointer, less that.
           onPointerMove={(e) => e.currentTarget.hasPointerCapture(e.pointerId) && resize(window.innerWidth - e.clientX - 20)}
           onDoubleClick={() => resize(CHAT.initial)}
           onKeyDown={(e) => {
@@ -292,21 +328,57 @@ export default function App() {
         >
           <span className="w-0.5 rounded-full bg-transparent transition-colors group-hover:bg-line group-focus-visible:bg-line group-active:bg-ink-faint" />
         </div>
-        <Chat
-          turns={turns}
-          types={types}
-          ignored={ignored}
-          onIgnore={ignore}
-          shown={selected ? null : shown}
-          onSend={send}
-          onShow={show}
-          onReset={() => {
-            setTurns([])
-            setSelected(null)
-            setShown(null)
+        <Tabs
+          tab={tab}
+          onTab={setTab}
+          panels={{
+            chat: (
+              <Chat
+                turns={turns}
+                types={types}
+                ignored={ignored}
+                onIgnore={ignore}
+                shown={selected ? null : shown}
+                onSend={send}
+                onShow={show}
+                onReset={() => {
+                  setTurns([])
+                  setSelected(null)
+                  setShown(null)
+                }}
+                onAddCampaign={openWizard}
+                savedProposals={savedProposals}
+              />
+            ),
+            campaigns: <CampaignList active={tab === "campaigns"} version={campaignsVersion} onEdit={editCampaign} onChanged={campaignsChanged} onToast={setToast} />,
+            // The Brief tab's cards go here (CAI-14).
+            brief: <p className="px-1 pt-2 text-ink-muted">The brief is coming soon.</p>,
           }}
         />
       </div>
+
+      {wizard && (
+        <CampaignWizard
+          key={wizard.opening}
+          mode={wizard.mode}
+          onClose={() => setWizard(null)}
+          onSaved={(campaign) => {
+            const { mode } = wizard
+            wizard.change?.updated(campaign)
+            if (mode.kind === "create") setSavedProposals((before) => new Map(before).set(mode.proposal, (before.get(mode.proposal) ?? 0) + 1))
+            wizardDone(mode.kind === "create" ? "Campaign saved as draft" : "Changes saved")
+          }}
+          onConflict={(campaign) => {
+            wizard.change?.updated(campaign)
+            wizardDone(changedMessage(campaign.status))
+          }}
+          onGone={() => {
+            wizard.change?.deleted()
+            wizardDone("This campaign was deleted.")
+          }}
+        />
+      )}
+      <Toast message={toast} onDone={hideToast} />
     </main>
   )
 }

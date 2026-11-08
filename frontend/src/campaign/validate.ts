@@ -8,6 +8,7 @@ import type { FieldErrors, WizardDraft } from "./draft"
 
 const MAX_TITLE = 200
 const MAX_STRATEGY = 4000
+const MAX_SLOGAN = 100
 
 const wholeIn = (value: number, low: number, high: number) => Number.isInteger(value) && value >= low && value <= high
 
@@ -34,6 +35,8 @@ function campaignErrors(draft: WizardDraft, today: string, errors: FieldErrors) 
   else if (title.length > MAX_TITLE) add(errors, "title", `At most ${MAX_TITLE} characters.`)
   if (!strategy) add(errors, "strategy", "Required.")
   else if (strategy.length > MAX_STRATEGY) add(errors, "strategy", `At most ${MAX_STRATEGY} characters.`)
+  // Counted as the server counts (Unicode characters), not in UTF-16 units: 🍵 is one character, not two.
+  if ([...draft.slogan.trim()].length > MAX_SLOGAN) add(errors, "slogan", `At most ${MAX_SLOGAN} characters.`)
 
   if (draft.products.length === 0) add(errors, "products", "Add at least one product.")
   const seen = new Set<string>()
@@ -67,7 +70,7 @@ export function stepErrors(step: 1 | 2 | 3, draft: WizardDraft, today: string): 
   return errors
 }
 
-const CAMPAIGN_FIELDS = ["title", "strategy", "products", "discount_percent", "starts_on", "ends_on", "segment", "counties"]
+const CAMPAIGN_FIELDS = ["title", "strategy", "slogan", "products", "discount_percent", "starts_on", "ends_on", "segment", "counties"]
 
 /** The step a field is on, or `null` for a problem no field shows (it is shown on the review). */
 export function stepOf(key: string): 1 | 2 | null {
