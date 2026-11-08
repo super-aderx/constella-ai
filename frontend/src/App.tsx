@@ -1,7 +1,7 @@
 import { use, useCallback, useDeferredValue, useMemo, useRef, useState, type CSSProperties } from "react"
 import { ask, getNetwork } from "./api"
 import { Logo } from "./Brand"
-import { CampaignList } from "./campaign/CampaignList"
+import { CampaignList, type CampaignChange } from "./campaign/CampaignList"
 import { CampaignWizard, type WizardMode } from "./campaign/CampaignWizard"
 import { changedMessage } from "./campaign/status"
 import { Toast } from "./campaign/Toast"
@@ -139,8 +139,11 @@ export default function App() {
     }
   }
   const [tab, setTab] = useState<Tab>("chat")
-  /** The campaign wizard on screen, and which opening it is: each opening is a new draft. */
-  const [wizard, setWizard] = useState<{ mode: WizardMode; opening: number } | null>(null)
+  /**
+   * The campaign wizard on screen, and which opening it is: each opening is a new draft. An edit
+   * also carries how the Campaigns tab takes in its outcome.
+   */
+  const [wizard, setWizard] = useState<{ mode: WizardMode; opening: number; change?: CampaignChange } | null>(null)
   const openings = useRef(0)
   // Keyed by the proposal itself, not its place in the conversation: a cleared conversation's new
   // proposals are new objects, so none shows "Saved ✓" for a campaign saved from an earlier one.
@@ -152,8 +155,11 @@ export default function App() {
   const hideToast = useCallback(() => setToast(null), [])
   /** Opens the wizard on a new campaign from an AI proposal: from the chat, and from the brief. */
   const openWizard = (proposal: Campaign) => setWizard({ mode: { kind: "create", proposal, alreadySaved: savedProposals.get(proposal) ?? 0 }, opening: ++openings.current })
-  const editCampaign = (campaign: SavedCampaign) => setWizard({ mode: { kind: "edit", campaign }, opening: ++openings.current })
-  /** The wizard closes on anything that ends it, and the Campaigns tab fetches the list again. */
+  const editCampaign = (campaign: SavedCampaign, change: CampaignChange) => setWizard({ mode: { kind: "edit", campaign }, opening: ++openings.current, change })
+  /**
+   * The wizard closes on anything that ends it, and the Campaigns tab fetches the list again. What
+   * the server answered is applied first, so a slow or failed refetch never leaves it out of date.
+   */
   const wizardDone = (message: string) => {
     setWizard(null)
     setToast(message)
@@ -193,6 +199,8 @@ export default function App() {
   // One question at a time, so only the last turn can be waiting.
   const send = async (question: string) => {
     if (turns.some((t) => !t.answer)) return
+    // Asked from the graph while another tab shows: the answer would come in out of sight.
+    setTab("chat")
     setTurns((t) => [...t, { question }])
     // A failed request is shown as the answer, so the chat never hangs.
     const asked = chosen.current
@@ -354,13 +362,20 @@ export default function App() {
           key={wizard.opening}
           mode={wizard.mode}
           onClose={() => setWizard(null)}
-          onSaved={() => {
+          onSaved={(campaign) => {
             const { mode } = wizard
+            wizard.change?.updated(campaign)
             if (mode.kind === "create") setSavedProposals((before) => new Map(before).set(mode.proposal, (before.get(mode.proposal) ?? 0) + 1))
             wizardDone(mode.kind === "create" ? "Campaign saved as draft" : "Changes saved")
           }}
-          onConflict={(campaign) => wizardDone(changedMessage(campaign.status))}
-          onGone={() => wizardDone("This campaign was deleted.")}
+          onConflict={(campaign) => {
+            wizard.change?.updated(campaign)
+            wizardDone(changedMessage(campaign.status))
+          }}
+          onGone={() => {
+            wizard.change?.deleted()
+            wizardDone("This campaign was deleted.")
+          }}
         />
       )}
       <Toast message={toast} onDone={hideToast} />

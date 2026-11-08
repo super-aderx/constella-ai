@@ -41,8 +41,8 @@ export function CampaignStep({ draft, errors, onChange, options, optionsFailed, 
           <>
             <input
               {...control}
+              // No maxLength: it counts UTF-16 units, so it would cut off emoji the server accepts. The step check counts characters.
               value={draft.slogan}
-              maxLength={100}
               placeholder={slogans.length > 0 ? "Pick one below and edit it, or write your own" : "Write one, or leave it empty"}
               onChange={(e) => onChange({ slogan: e.target.value })}
               className={input}

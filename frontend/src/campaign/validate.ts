@@ -35,7 +35,8 @@ function campaignErrors(draft: WizardDraft, today: string, errors: FieldErrors) 
   else if (title.length > MAX_TITLE) add(errors, "title", `At most ${MAX_TITLE} characters.`)
   if (!strategy) add(errors, "strategy", "Required.")
   else if (strategy.length > MAX_STRATEGY) add(errors, "strategy", `At most ${MAX_STRATEGY} characters.`)
-  if (draft.slogan.trim().length > MAX_SLOGAN) add(errors, "slogan", `At most ${MAX_SLOGAN} characters.`)
+  // Counted as the server counts (Unicode characters), not in UTF-16 units: 🍵 is one character, not two.
+  if ([...draft.slogan.trim()].length > MAX_SLOGAN) add(errors, "slogan", `At most ${MAX_SLOGAN} characters.`)
 
   if (draft.products.length === 0) add(errors, "products", "Add at least one product.")
   const seen = new Set<string>()

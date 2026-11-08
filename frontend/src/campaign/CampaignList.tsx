@@ -4,12 +4,21 @@ import type { SavedCampaign } from "../types"
 import { CampaignDetail, StatusBadge } from "./CampaignDetail"
 import { dates } from "./ReviewStep"
 
+/** How the list takes in what an edit of one of its campaigns ended with, as soon as it is known. */
+export interface CampaignChange {
+  /** The campaign as the server now has it: saved, or refused because it had moved on. */
+  updated: (campaign: SavedCampaign) => void
+  /** The campaign is no longer stored. */
+  deleted: () => void
+}
+
 interface CampaignListProps {
   /** Whether the tab is showing: the list is fetched again each time it opens. */
   active: boolean
   /** Goes up whenever a campaign was saved or moved, here or in the wizard: the list is fetched again. */
   version: number
-  onEdit: (campaign: SavedCampaign) => void
+  /** Opens the wizard on a draft. `change` applies its outcome to this list without waiting for a refetch. */
+  onEdit: (campaign: SavedCampaign, change: CampaignChange) => void
   /** A campaign changed here. */
   onChanged: () => void
   onToast: (message: string) => void
@@ -47,30 +56,20 @@ export function CampaignList({ active, version, onEdit, onChanged, onToast }: Ca
   // Read from the list, so a refetch shows the detail's campaign as it is now, and a deleted one closes.
   const open = campaigns?.find((c) => c.id === selected)
   const replace = (campaign: SavedCampaign) => setCampaigns((list) => list && list.map((c) => (c.id === campaign.id ? campaign : c)))
+  // A delete can land after the user has moved on to another campaign: only its own detail closes.
+  const remove = (id: string) => {
+    setCampaigns((list) => list && list.filter((c) => c.id !== id))
+    setSelected((current) => (current === id ? null : current))
+  }
 
   return (
     <section aria-label="Campaigns" className="flex min-h-0 flex-col">
       <header className="flex h-10 shrink-0 items-start px-1">
         <h2 className="font-semibold">Campaigns</h2>
       </header>
-      {open ? (
-        <CampaignDetail
-          key={open.id}
-          campaign={open}
-          onBack={() => setSelected(null)}
-          onEdit={() => onEdit(open)}
-          onUpdated={(campaign) => {
-            replace(campaign)
-            onChanged()
-          }}
-          onDeleted={() => {
-            setCampaigns((list) => list && list.filter((c) => c.id !== open.id))
-            setSelected(null)
-            onChanged()
-          }}
-          onToast={onToast}
-        />
-      ) : failed ? (
+      {/* A failed refresh is shown even over an open detail: its status and actions may be stale.
+          The selection is kept, so a Retry that works opens the detail again. */}
+      {failed ? (
         <div className="px-1 pt-2">
           <p role="alert" className="text-star-ink">
             Could not load campaigns.
@@ -79,6 +78,22 @@ export function CampaignList({ active, version, onEdit, onChanged, onToast }: Ca
             Retry
           </button>
         </div>
+      ) : open ? (
+        <CampaignDetail
+          key={open.id}
+          campaign={open}
+          onBack={() => setSelected(null)}
+          onEdit={() => onEdit(open, { updated: replace, deleted: () => remove(open.id) })}
+          onUpdated={(campaign) => {
+            replace(campaign)
+            onChanged()
+          }}
+          onDeleted={() => {
+            remove(open.id)
+            onChanged()
+          }}
+          onToast={onToast}
+        />
       ) : !campaigns ? (
         <p className="px-1 pt-2 text-ink-muted">Loading campaigns…</p>
       ) : campaigns.length === 0 ? (
