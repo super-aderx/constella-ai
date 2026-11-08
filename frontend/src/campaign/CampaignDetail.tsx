@@ -2,6 +2,7 @@ import { useRef, useState } from "react"
 import { campaignAction, CampaignConflict, CampaignError, deleteCampaign } from "../api"
 import { cn } from "../lib"
 import type { SavedCampaign } from "../types"
+import { CampaignTrend } from "./CampaignTrend"
 import { dates, Pilot, Products, Row } from "./ReviewStep"
 import { actionsFor, changedMessage, CONFIRM, MOVE_LABEL, STATUS_BADGE, STATUS_LABEL, type Move } from "./status"
 
@@ -134,6 +135,7 @@ export function CampaignDetail({ campaign, onBack, onEdit, onUpdated, onDeleted,
             )}
           </Row>
         </dl>
+        <CampaignTrend campaign={campaign} />
         {error && (
           <p role="alert" className="mt-3 rounded-lg bg-star/15 px-3 py-2 text-[13px] text-star-ink">
             {error}
