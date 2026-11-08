@@ -128,13 +128,18 @@ def test_ask_rejects_a_conversation_past_the_cap(seen: list):
 # each request, so a real registry's background runs would never finish here.
 
 
+async def no_run(card, days, segment):
+    """A card run for the stub's real registry, which only reads: it is never meant to run."""
+    raise AssertionError(f"The stub registry ran the card {card.key}.")
+
+
 class Registry:
     """Records what the endpoints ask of the registry."""
 
     def __init__(self, busy: bool = False):
         self.calls: list[tuple] = []
         self.busy = busy
-        self.real = depict.Registry(run=None)
+        self.real = depict.Registry(run=no_run)
 
     def start(self, scope):
         self.calls.append(("start", scope))

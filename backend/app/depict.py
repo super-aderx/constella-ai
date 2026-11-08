@@ -210,6 +210,8 @@ class Registry:
         self.run = run
         self._limit = asyncio.Semaphore(concurrency)
         self._scopes: dict[Scope, dict[str, DepictCard]] = {}
+        # One read of each scope's network, shared by its cards (see _network).
+        self._networks: dict[Scope, asyncio.Task] = {}
         # The loop keeps only weak references to tasks: these keep the runs alive.
         self._tasks: set[asyncio.Task] = set()
 
@@ -245,13 +247,24 @@ class Registry:
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
 
+    def _network(self, scope: Scope) -> asyncio.Task:
+        """The scope's network, read once for all its cards. load_network's cache does not stop
+        threads that miss it at the same moment from each reading the database, so the 8 cards
+        of a new scope wait on one read. A read that failed is tried again by the next card that
+        needs it, such as a refresh."""
+        read = self._networks.get(scope)
+        if read is None or (read.done() and (read.cancelled() or read.exception())):
+            read = asyncio.create_task(asyncio.to_thread(load_network, *scope))
+            self._networks[scope] = read
+        return read
+
     def _set(self, scope: Scope, key: str, **update) -> None:
         # A fresh card each time: one already handed out never changes under its reader.
         self._scopes[scope][key] = self._scopes[scope][key].model_copy(update=update)
 
     async def _answer(self, scope: Scope, card: Card) -> None:
         try:
-            network = await asyncio.to_thread(load_network, *scope)
+            network = await self._network(scope)
             if reason := precheck(card.key, network):
                 self._set(scope, card.key, state="no_data", reason=reason, answer=None)
                 self._set(scope, card.key, answered_at=None)

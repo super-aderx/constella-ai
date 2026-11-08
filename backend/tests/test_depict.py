@@ -469,3 +469,50 @@ def test_a_strategy_card_skips_the_strategist_when_review_fails(plan: dict):
 
 def test_every_prompt_asks_for_the_takeaway_first():
     assert all(depict.FORMAT in c.prompt for c in CARDS)
+
+
+def test_a_scope_reads_its_network_once(monkeypatch: pytest.MonkeyPatch):
+    """The 8 cards share one read: load_network's cache does not stop threads that miss at the
+    same moment from each reading the database."""
+    reads = []
+
+    def load_network(days, segment):
+        reads.append((days, segment))
+        return RICH
+
+    monkeypatch.setattr(depict, "load_network", load_network)
+
+    async def go():
+        registry = Registry(Fake())
+        registry.start((90, None))
+        await settle(registry)
+        registry.refresh((90, None), "best_pairs")
+        await settle(registry)
+
+    asyncio.run(go())
+    assert reads == [(90, None)]
+
+
+def test_a_refresh_reads_the_network_again_after_a_failed_read(monkeypatch: pytest.MonkeyPatch):
+    reads = []
+
+    def load_network(days, segment):
+        reads.append((days, segment))
+        if len(reads) == 1:
+            raise OSError("no database")
+        return RICH
+
+    monkeypatch.setattr(depict, "load_network", load_network)
+
+    async def go():
+        registry = Registry(Fake())
+        registry.start((None, None))
+        await settle(registry)
+        assert set(states(registry, (None, None)).values()) == {"failed"}
+        registry.refresh((None, None), "best_pairs")
+        await settle(registry)
+        return registry
+
+    registry = asyncio.run(go())
+    assert len(reads) == 2
+    assert states(registry, (None, None))["best_pairs"] == "answered"
