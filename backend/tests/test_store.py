@@ -245,6 +245,19 @@ def test_update_draft_removes_the_pilot(monkeypatch):
     assert db.ran[-1][1] == {"campaign_id": CAMPAIGN_ID}
 
 
+def test_update_draft_without_a_pilot_before_or_after_deletes_none(monkeypatch):
+    after = draft(pilot=None)
+    db = database(
+        monkeypatch,
+        {
+            "campaign_for_update": locked(draft(pilot=None)),
+            "update_campaign": [stored(campaign_params(after, CAMPAIGN_ID))],
+        },
+    )
+    assert store.update_draft(CAMPAIGN_ID, after, TODAY).pilot is None
+    assert db.names == ["campaign_for_update", "update_campaign"]
+
+
 def test_update_or_delete_of_a_missing_campaign_writes_nothing(monkeypatch):
     db = database(monkeypatch, {})
     assert store.update_draft(CAMPAIGN_ID, draft(), TODAY) is None

@@ -180,7 +180,8 @@ def update_draft(campaign_id: UUID, draft: CampaignDraft, today: date) -> SavedC
         row = _run(conn, "update_campaign", campaign_params(draft, campaign_id))[0]
         params = pilot_params(draft.pilot, campaign_id)
         if params is None:
-            _run(conn, "delete_pilot", {"campaign_id": campaign_id})
+            if current.pilot is not None:
+                _run(conn, "delete_pilot", {"campaign_id": campaign_id})
             pilot = None
         else:
             pilot = _run(conn, "upsert_pilot", params)[0]
