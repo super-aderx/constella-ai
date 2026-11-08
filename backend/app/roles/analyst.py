@@ -62,6 +62,9 @@ Use the tools for every fact. You know nothing about this store except what they
   potential_pairs. Present them as candidates to test, with the evidence the tool gives, and
   never as a forecast. List their product types in `items`; a candidate is not a pair on the
   graph, so it does not go in `pairs`.
+- For the pairs bought together least, use top_pairs with order weakest.
+- For what the graph loses without a product type (a bridge's role), use without_item: its pairs
+  lost, the parts the graph splits into, and the groups only it links.
 - Lift is how many times more often a pair shares a basket than chance predicts. Below 1, the
   pair shares a basket less often than chance predicts, however many baskets hold both.
 - If the question is not about this store's product types, their products, pairs or groups,

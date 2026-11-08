@@ -141,6 +141,7 @@ def top_items(
 def top_pairs(
     ctx: Ctx,
     by: Literal["co_orders", "lift"],
+    order: Literal["strongest", "weakest"],
     min_co_orders: int,
     limit: int,
     days: int | None,
@@ -150,17 +151,19 @@ def top_pairs(
 
     Args:
         by: What to rank by.
+        order: "strongest" first, or "weakest" first: for the pairs bought together least.
         min_co_orders: Leave out pairs sharing fewer baskets than this. The graph already leaves
             out its rarest pairs; 1 keeps every pair it shows.
         limit: How many to return.
     """
-    args = {"by": by, "min_co_orders": min_co_orders, "limit": limit}
+    args = {"by": by, "order": order, "min_co_orders": min_co_orders, "limit": limit}
     args |= {"days": days, "segment": segment}
     if error := unknown(ctx, segment):
         return record(ctx, "top_pairs", args, error)
     key = "coOrders" if by == "co_orders" else "lift"
+    sign = -1 if order == "strongest" else 1
     pairs = [p for p in load_network(days, segment)["pairs"] if p["coOrders"] >= min_co_orders]
-    ranked = sorted(pairs, key=lambda p: (-p[key], p["a"], p["b"]))[:limit]
+    ranked = sorted(pairs, key=lambda p: (sign * p[key], p["a"], p["b"]))[:limit]
     return record(ctx, "top_pairs", args, ranked)
 
 
@@ -238,6 +241,68 @@ def central_items(ctx: Ctx, limit: int, days: int | None, segment: str | None) -
         for name in ranked
     ]
     return record(ctx, "central_items", args, rows)
+
+
+def removal(network: dict, item: str) -> dict:
+    """What the graph of pairs above chance loses without one product type: its pairs, whether
+    the graph falls apart, which part is cut off, and which groups only it linked."""
+    _, graph = betweenness(network)
+    lost = [p for p in network["pairs"] if p["lift"] > 1 and item in (p["a"], p["b"])]
+    lost.sort(key=lambda p: (-p["lift"], p["a"], p["b"]))
+    found = {
+        "item": item,
+        "pairs_lost": [{k: p[k] for k in ("a", "b", "lift", "coOrders")} for p in lost],
+        "parts_before": nx.number_connected_components(graph),
+        "parts_after": nx.number_connected_components(graph),
+        "cut_off": [],
+        "groups_linked_only_through_it": [],
+    }
+    if item not in graph:
+        # In no pair above chance: nothing on this graph rests on it.
+        return found
+
+    # The part it was in falls into these pieces; the largest carries on, the rest are cut off.
+    part = nx.node_connected_component(graph, item) - {item}
+    after = graph.subgraph(set(graph) - {item})
+    pieces = [sorted(p) for p in nx.connected_components(after.subgraph(part))]
+    pieces.sort(key=lambda p: (-len(p), p[0]))
+
+    community = {i["name"]: i["community"] for i in network["items"]}
+    labels = network["communities"]
+
+    def linked(g: nx.Graph) -> set[tuple[str, str]]:
+        """Pairs of groups with a pair above chance across them."""
+        across = set()
+        for a, b in g.edges:
+            x, y = community.get(a), community.get(b)
+            if x is not None and y is not None and x != y:
+                across.add(tuple(sorted((labels[x], labels[y]))))
+        return across
+
+    found["parts_after"] = nx.number_connected_components(after)
+    found["cut_off"] = pieces[1:]
+    found["groups_linked_only_through_it"] = [
+        list(g) for g in sorted(linked(graph) - linked(after))
+    ]
+    return found
+
+
+@function_tool
+def without_item(ctx: Ctx, item: str, days: int | None, segment: str | None) -> dict:
+    """What the graph loses without one product type, as if it were no longer sold: its pairs
+    above chance, how many parts the graph is in before and after, the parts cut off from the
+    rest, and the groups it alone links. Use it to weigh a bridge: the graph with and without it.
+
+    Args:
+        item: The product type, spelled as on the graph.
+    """
+    args = {"item": item, "days": days, "segment": segment}
+    if error := unknown(ctx, segment):
+        return record(ctx, "without_item", args, error)
+    network = load_network(days, segment)
+    if error := missing(network, item):
+        return record(ctx, "without_item", args, error)
+    return record(ctx, "without_item", args, removal(network, item))
 
 
 @function_tool
@@ -416,6 +481,7 @@ TOOLS = [
     item_neighbors,
     pair_stats,
     central_items,
+    without_item,
     communities,
     item_products,
     top_bundles,
